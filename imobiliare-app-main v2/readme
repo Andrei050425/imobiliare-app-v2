@@ -1,0 +1,6 @@
+Mereu dupa pull de pe git trebuie:
+
+docker exec -it imobiliare_server npx knex migrate:latest
+docker exec -it imobiliare_server npx knex seed:run
+si dupa 
+docker-compose up --build
