@@ -22,8 +22,8 @@
 
     <div v-else>
       <p class="result-count">{{ properties.length }} spații disponibile</p>
-      <div class="row">
-        <div class="flex xs12 sm6 md4 lg3" v-for="p in properties" :key="p.id">
+      <div class="catalog-grid">
+        <div v-for="p in properties" :key="p.id">
           <va-card class="item-card mb-4">
             <va-image :src="getImageUrl(p.image_path)" style="height: 170px;" fit="cover" />
             <va-card-content>
@@ -43,9 +43,9 @@
             </va-card-content>
           </va-card>
         </div>
-        <div v-if="properties.length === 0" class="flex xs12 text-center">
-          <p>Niciun spațiu nu corespunde filtrelor selectate.</p>
-        </div>
+      </div>
+      <div v-if="properties.length === 0" class="text-center mt-4">
+        <p>Niciun spațiu nu corespunde filtrelor selectate.</p>
       </div>
     </div>
   </div>
@@ -117,6 +117,7 @@ export default {
 .result-count { color: #6b7280; margin-bottom: 1rem; }
 .title-txt { font-weight: 600; }
 .stats { display: flex; gap: 14px; color: #6b7280; font-size: 0.9rem; }
-.item-card { transition: transform .2s; }
-.item-card:hover { transform: translateY(-4px); }
+.catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
+.item-card { transition: transform .2s; border: 1px solid #e5e7eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.item-card:hover { transform: translateY(-4px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 </style>

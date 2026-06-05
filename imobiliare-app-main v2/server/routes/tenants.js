@@ -7,7 +7,7 @@ const requireRole = require("../middleware/roles");
 const auth = passport.authenticate("jwt", { session: false });
 
 // GET /api/tenants — listă (admin, contabil, tehnic)
-router.get("/", auth, requireRole("admin", "contabil", "tehnic"), async (req, res) => {
+router.get("/", auth, requireRole("admin"), async (req, res) => {
   try {
     const { status, q } = req.query;
     let query = knex("tenants").select("*").orderBy("created_at", "desc");
@@ -77,6 +77,11 @@ router.post("/", auth, requireRole("admin"), async (req, res) => {
         status: "PROSPECT",
       })
       .returning("*");
+      
+    if (user_id) {
+      await knex("users").where({ id: user_id }).update({ role: "client" });
+    }
+    
     res.status(201).json(tenant);
   } catch (err) {
     console.error(err);
@@ -106,10 +111,34 @@ router.put("/:id", auth, requireRole("admin"), async (req, res) => {
       .update(fields)
       .returning("*");
     if (!tenant) return res.status(404).json({ message: "Chiriaș inexistent." });
+    
+    if (fields.user_id) {
+      await knex("users").where({ id: fields.user_id }).update({ role: "client" });
+    }
+    
     res.json(tenant);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Eroare la actualizare." });
+  }
+});
+
+// DELETE /api/tenants/:id — ștergere (admin)
+router.delete("/:id", auth, requireRole("admin"), async (req, res) => {
+  try {
+    const tenant = await knex("tenants").where({ id: req.params.id }).first();
+    if (!tenant) return res.status(404).json({ message: "Chiriaș inexistent." });
+
+    // Pentru a putea șterge chiriașul, ștergem mai întâi contractele lui.
+    await knex("contracts").where({ tenant_id: tenant.id }).del();
+    
+    // După ștergerea contractelor putem șterge chiriașul.
+    await knex("tenants").where({ id: tenant.id }).del();
+    
+    res.json({ message: "Chiriaș șters cu succes." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Eroare la ștergerea chiriașului." });
   }
 });
 

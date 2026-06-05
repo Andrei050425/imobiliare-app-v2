@@ -36,18 +36,30 @@ router.get("/admin", auth, requireRole("admin"), async (req, res) => {
       .sum("total_ron as s")
       .first();
     const overdueSum = await knex("invoices").where({ status: "OVERDUE" }).sum("total_ron as s").first();
-    const overdueTenants = await knex("tenants").where({ status: "OVERDUE" }).count("id as c").first();
+    const overdueTenants = await knex("invoices")
+      .join("contracts", "invoices.contract_id", "contracts.id")
+      .where("invoices.status", "OVERDUE")
+      .countDistinct("contracts.tenant_id as c")
+      .first();
 
     const byStatus = await knex("properties").select("status").count("id as c").groupBy("status");
 
     const expiring = await knex("contracts")
-      .where({ status: "ACTIVE" })
+      .where("contracts.status", "ACTIVE")
       .andWhere("end_date", "<=", new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10))
       .join("tenants", "contracts.tenant_id", "tenants.id")
       .join("properties", "contracts.property_id", "properties.id")
       .select("contracts.contract_number", "contracts.end_date", "tenants.company_name as tenant_name", "properties.title as property_title")
       .orderBy("contracts.end_date", "asc")
       .limit(5);
+
+    const overdueList = await knex("invoices")
+      .where("invoices.status", "OVERDUE")
+      .join("contracts", "invoices.contract_id", "contracts.id")
+      .join("tenants", "contracts.tenant_id", "tenants.id")
+      .select("invoices.invoice_number", "invoices.due_date", "invoices.total_ron", "tenants.company_name as tenant_name")
+      .orderBy("invoices.due_date", "asc")
+      .limit(10);
 
     const total = Number(totalSpaces.c);
     const occ = Number(occupied.c);
@@ -63,40 +75,6 @@ router.get("/admin", auth, requireRole("admin"), async (req, res) => {
       overdueTenants: Number(overdueTenants.c),
       spacesByStatus: byStatus,
       expiringContracts: expiring,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Eroare server." });
-  }
-});
-
-// GET /api/dashboard/contabil — KPI financiari
-router.get("/contabil", auth, requireRole("admin", "contabil"), async (req, res) => {
-  try {
-    const { start, end } = monthBounds();
-    const invoiced = await knex("invoices").whereBetween("issue_date", [start, end]).sum("total_ron as s").first();
-    const collected = await knex("invoices").where({ status: "PAID" }).whereBetween("issue_date", [start, end]).sum("total_ron as s").first();
-    const overdueSum = await knex("invoices").where({ status: "OVERDUE" }).sum("total_ron as s").first();
-    const overdueCount = await knex("invoices").where({ status: "OVERDUE" }).count("id as c").first();
-    const activeContracts = await knex("contracts").where({ status: "ACTIVE" }).count("id as c").first();
-
-    const overdueList = await knex("invoices")
-      .where("invoices.status", "OVERDUE")
-      .join("contracts", "invoices.contract_id", "contracts.id")
-      .join("tenants", "contracts.tenant_id", "tenants.id")
-      .select("invoices.invoice_number", "invoices.due_date", "invoices.total_ron", "tenants.company_name as tenant_name")
-      .orderBy("invoices.due_date", "asc")
-      .limit(10);
-
-    const inv = Number(invoiced.s || 0);
-    const col = Number(collected.s || 0);
-    res.json({
-      invoicedThisMonth: inv,
-      collectedThisMonth: col,
-      collectionRate: inv ? Math.round((col / inv) * 100) : 0,
-      overdueAmount: Number(overdueSum.s || 0),
-      overdueCount: Number(overdueCount.c),
-      activeContracts: Number(activeContracts.c),
       overdueInvoices: overdueList,
     });
   } catch (err) {
@@ -104,6 +82,8 @@ router.get("/contabil", auth, requireRole("admin", "contabil"), async (req, res)
     res.status(500).json({ message: "Eroare server." });
   }
 });
+
+
 
 // GET /api/dashboard/tehnic — KPI mentenanță
 router.get("/tehnic", auth, requireRole("admin", "tehnic"), async (req, res) => {
@@ -167,6 +147,16 @@ router.get("/client", auth, requireRole("client"), async (req, res) => {
       .orderBy("invoices.due_date", "asc")
       .first();
 
+    const rentedProperties = await knex("contracts")
+      .where({ "contracts.tenant_id": tenant.id, "contracts.status": "ACTIVE" })
+      .join("properties", "contracts.property_id", "properties.id")
+      .leftJoin(
+        knex("images").select("property_id").min("path as image_path").groupBy("property_id").as("img"),
+        "img.property_id",
+        "properties.id"
+      )
+      .select("properties.*", "contracts.contract_number", "img.image_path as image_path");
+
     res.json({
       tenantName: tenant.company_name,
       tenantStatus: tenant.status,
@@ -174,6 +164,7 @@ router.get("/client", auth, requireRole("client"), async (req, res) => {
       outstanding: Number(outstanding.s || 0),
       openMaintenance: Number(openMaint.c),
       nextInvoice: nextInvoice || null,
+      rentedProperties
     });
   } catch (err) {
     console.error(err);

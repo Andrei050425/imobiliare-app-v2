@@ -6,22 +6,20 @@
 import { computed } from 'vue';
 import { useStore } from 'vuex';
 import DashboardAdmin from './dashboards/DashboardAdmin.vue';
-import DashboardContabil from './dashboards/DashboardContabil.vue';
-import DashboardTehnic from './dashboards/DashboardTehnic.vue';
 import DashboardClient from './dashboards/DashboardClient.vue';
+import DashboardUser from './dashboards/DashboardUser.vue';
 
 export default {
   name: 'DashboardRouter',
-  components: { DashboardAdmin, DashboardContabil, DashboardTehnic, DashboardClient },
+  components: { DashboardAdmin, DashboardClient, DashboardUser },
   setup() {
     const store = useStore();
     const map = {
       admin: 'DashboardAdmin',
-      contabil: 'DashboardContabil',
-      tehnic: 'DashboardTehnic',
       client: 'DashboardClient',
+      user: 'DashboardUser',
     };
-    const dashboardComponent = computed(() => map[store.getters.userRole] || 'DashboardClient');
+    const dashboardComponent = computed(() => map[store.getters.userRole] || 'DashboardUser');
     return { dashboardComponent };
   }
 };

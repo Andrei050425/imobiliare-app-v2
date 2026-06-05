@@ -1,0 +1,31 @@
+# --- Dependențe (NU le urcăm niciodată, sunt prea mari) ---
+node_modules/
+*/node_modules/
+
+# --- Variabile de mediu (Secrete) ---
+.env
+*/.env
+
+# --- Build-uri de producție ---
+dist/
+build/
+client/dist/
+
+# --- Fișiere de sistem ---
+.DS_Store
+Thumbs.db
+
+# --- Log-uri ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Imagini încărcate (De obicei nu se pun pe git, ocupă spațiu) ---
+# Dacă vrei totuși să păstrezi folderul gol, poți folosi .gitkeep, dar acum dăm ignore
+server/uploads/*
+!server/uploads/.gitkeep
+
+# --- Docker ---
+# Ignorăm datele bazei de date (ca să nu urcăm baza de date pe net)
+pgdata/
+.docker/

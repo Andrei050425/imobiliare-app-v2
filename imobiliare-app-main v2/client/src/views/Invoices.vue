@@ -10,12 +10,15 @@
     <va-card>
       <va-card-content>
         <va-data-table :items="invoices" :columns="cols" :loading="loading">
+          <template #cell(issue_date)="{ value }">{{ fmtDate(value) }}</template>
+          <template #cell(due_date)="{ value }">{{ fmtDate(value) }}</template>
           <template #cell(total_ron)="{ value }">{{ fmt(value) }} RON</template>
           <template #cell(status)="{ value }">
             <va-badge :color="ST[value]?.color" :text="ST[value]?.label || value" />
           </template>
           <template #cell(actions)="{ row }">
             <va-button preset="plain" icon="visibility" title="Vezi" @click="$router.push(`/app/invoices/${row.source.id}`)" />
+            <va-button preset="plain" color="info" icon="picture_as_pdf" title="Descarcă PDF" @click="downloadPdf(row.source.id, row.source.invoice_number)" />
             <va-button v-if="['ISSUED','OVERDUE'].includes(row.source.status)" preset="plain" color="success" icon="paid" title="Marchează plătită" @click="pay(row.source.id)" />
             <va-button v-if="row.source.status !== 'CANCELLED'" preset="plain" color="danger" icon="block" title="Anulează" @click="cancel(row.source.id)" />
           </template>
@@ -46,10 +49,14 @@ export default {
       { key: 'due_date', label: 'Scadență' },
       { key: 'total_ron', label: 'Total' },
       { key: 'status', label: 'Stare' },
-      { key: 'actions', label: '' },
+      { key: 'actions', label: 'Acțiuni' },
     ];
     const statusOptions = Object.entries(INVOICE_STATUS).map(([value, v]) => ({ value, label: v.label }));
     const fmt = (n) => Number(n || 0).toLocaleString('ro-RO');
+    const fmtDate = (d) => {
+      if (!d) return '';
+      return new Date(d).toLocaleString('ro-RO');
+    };
     const load = async () => {
       loading.value = true;
       try {
@@ -74,8 +81,24 @@ export default {
       try { await api.patch(`/invoices/${id}/cancel`); init({ message: 'Factură anulată.', color: 'success' }); load(); }
       catch (e) { init({ message: 'Eroare.', color: 'danger' }); }
     };
+    const downloadPdf = async (id, invNumber) => {
+      try {
+        const response = await api.get(`/invoices/${id}/pdf`, { responseType: 'blob' });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `factura-${invNumber}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error(err);
+        init({ message: 'Eroare la descărcarea PDF-ului.', color: 'danger' });
+      }
+    };
     onMounted(load);
-    return { invoices, loading, generating, statusFilter, statusOptions, cols, ST: INVOICE_STATUS, fmt, load, generate, pay, cancel };
+    return { invoices, loading, generating, statusFilter, statusOptions, cols, ST: INVOICE_STATUS, fmt, fmtDate, load, generate, pay, cancel, downloadPdf };
   }
 };
 </script>

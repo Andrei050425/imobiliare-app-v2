@@ -22,7 +22,7 @@ async function nextContractNumber(year) {
 }
 
 // GET /api/contracts — listă cu join chiriaș + spațiu
-router.get("/", auth, requireRole("admin", "contabil"), async (req, res) => {
+router.get("/", auth, requireRole("admin"), async (req, res) => {
   try {
     const { status } = req.query;
     let query = knex("contracts")
@@ -163,6 +163,24 @@ router.patch("/:id/terminate", auth, requireRole("admin"), async (req, res) => {
         updated_at: knex.fn.now(),
       });
       await trx("properties").where({ id: contract.property_id }).update({ status: "FREE" });
+
+      // Verificăm câte contracte ACTIVE mai are acest chiriaș
+      const activeContracts = await trx("contracts")
+        .where({ tenant_id: contract.tenant_id, status: "ACTIVE" })
+        .count("id as count")
+        .first();
+
+      if (parseInt(activeContracts.count) === 0) {
+        // Dacă nu mai are contracte active, îi setăm statusul INACTIVE 
+        await trx("tenants").where({ id: contract.tenant_id }).update({ status: "INACTIVE" });
+        
+        // Preluăm user_id-ul aferent
+        const tenant = await trx("tenants").where({ id: contract.tenant_id }).first();
+        if (tenant && tenant.user_id) {
+          // Și îl retrogradăm la 'user'
+          await trx("users").where({ id: tenant.user_id }).update({ role: "user" });
+        }
+      }
     });
     res.json({ message: "Contract reziliat." });
   } catch (err) {

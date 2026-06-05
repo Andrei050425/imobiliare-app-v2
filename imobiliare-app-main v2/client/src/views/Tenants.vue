@@ -17,7 +17,9 @@
             <va-badge :color="ST[value]?.color" :text="ST[value]?.label || value" />
           </template>
           <template #cell(actions)="{ row }">
-            <va-button v-if="isAdmin" preset="plain" icon="edit" @click="openEdit(row.source)" />
+            <va-button preset="plain" color="primary" icon="visibility" title="Detalii" @click="openDetails(row.source)" />
+            <va-button v-if="isAdmin" preset="plain" icon="edit" title="Editează" @click="openEdit(row.source)" />
+            <va-button v-if="isAdmin" preset="plain" color="danger" icon="delete" title="Șterge" @click="deleteTenant(row.source.id)" />
           </template>
         </va-data-table>
       </va-card-content>
@@ -37,6 +39,26 @@
       <template #footer>
         <va-button preset="secondary" @click="showModal = false">Anulează</va-button>
         <va-button class="ml-2" @click="save">Salvează</va-button>
+      </template>
+    </va-modal>
+
+    <!-- Modal detalii chiriaș -->
+    <va-modal v-model="showDetailsModal" title="Detalii Chiriaș" hide-default-actions>
+      <div class="modal-form" v-if="detailsTenant">
+        <va-input :modelValue="detailsTenant.company_name" label="Denumire firmă" class="mb-2" readonly />
+        <va-input :modelValue="detailsTenant.cui" label="CUI" class="mb-2" readonly />
+        <va-input :modelValue="detailsTenant.reg_no || '-'" label="Nr. Reg. Comerțului" class="mb-2" readonly />
+        <va-input :modelValue="detailsTenant.address || '-'" label="Adresă" class="mb-2" readonly />
+        <va-input :modelValue="detailsTenant.email || '-'" label="Email" class="mb-2" readonly />
+        <va-input :modelValue="detailsTenant.phone || '-'" label="Telefon" class="mb-2" readonly />
+        <va-input :modelValue="detailsTenant.legal_rep_name || '-'" label="Reprezentant legal" class="mb-2" readonly />
+        <div class="mt-3">
+          <span style="color: var(--va-primary); font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">Stare curentă:</span>
+          <va-badge class="ml-2" :color="ST[detailsTenant.status]?.color" :text="ST[detailsTenant.status]?.label || detailsTenant.status" />
+        </div>
+      </div>
+      <template #footer>
+        <va-button @click="showDetailsModal = false">Închide</va-button>
       </template>
     </va-modal>
   </div>
@@ -59,6 +81,8 @@ export default {
     const search = ref('');
     const statusFilter = ref(null);
     const showModal = ref(false);
+    const showDetailsModal = ref(false);
+    const detailsTenant = ref(null);
     const editing = ref(false);
     const form = reactive({});
     const isAdmin = computed(() => store.getters.isAdmin);
@@ -69,7 +93,7 @@ export default {
       { key: 'email', label: 'Email' },
       { key: 'phone', label: 'Telefon' },
       { key: 'status', label: 'Stare' },
-      { key: 'actions', label: '' },
+      { key: 'actions', label: 'Acțiuni' },
     ];
     const statusOptions = Object.entries(TENANT_STATUS).map(([value, v]) => ({ value, label: v.label }));
 
@@ -85,6 +109,7 @@ export default {
     };
     const openCreate = () => { editing.value = false; Object.keys(form).forEach(k => delete form[k]); showModal.value = true; };
     const openEdit = (t) => { editing.value = true; Object.assign(form, t); showModal.value = true; };
+    const openDetails = (t) => { detailsTenant.value = t; showDetailsModal.value = true; };
     const save = async () => {
       try {
         if (editing.value) await api.put(`/tenants/${form.id}`, form);
@@ -94,9 +119,19 @@ export default {
         load();
       } catch (e) { init({ message: e.response?.data?.message || 'Eroare.', color: 'danger' }); }
     };
+    const deleteTenant = async (id) => {
+      if (!confirm('Ești sigur că vrei să ștergi acest chiriaș? Toate contractele asociate vor fi de asemenea șterse!')) return;
+      try {
+        await api.delete(`/tenants/${id}`);
+        init({ message: 'Chiriaș șters cu succes.', color: 'success' });
+        load();
+      } catch (e) {
+        init({ message: e.response?.data?.message || 'Eroare la ștergere.', color: 'danger' });
+      }
+    };
 
     onMounted(load);
-    return { tenants, loading, search, statusFilter, statusOptions, cols, ST: TENANT_STATUS, isAdmin, showModal, editing, form, openCreate, openEdit, save, load };
+    return { tenants, loading, search, statusFilter, statusOptions, cols, ST: TENANT_STATUS, isAdmin, showModal, showDetailsModal, detailsTenant, editing, form, openCreate, openEdit, openDetails, save, deleteTenant, load };
   }
 };
 </script>

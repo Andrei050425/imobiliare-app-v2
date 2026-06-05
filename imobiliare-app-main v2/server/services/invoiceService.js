@@ -4,8 +4,7 @@
  * cât și de generarea manuală din interfață.
  */
 const { getEurRonRate } = require("../utils/bnr");
-
-const VAT_RATE = 0.19; // cota TVA implicită
+const VAT_RATE = 0.21; // cota TVA actualizată
 
 /**
  * Generează numărul de factură: SANTA-AAAA-NNNN (secvențial pe an).
@@ -40,7 +39,7 @@ async function generateInvoiceForContract(knex, contract, options = {}) {
   // Evităm dublarea: există deja factură pentru această perioadă?
   const existing = await knex("invoices")
     .where({ contract_id: contract.id })
-    .andWhere("period_start", periodStart.toISOString().slice(0, 10))
+    .andWhere("period_start", periodStart.toISOString())
     .first();
   if (existing) return null;
 
@@ -52,10 +51,8 @@ async function generateInvoiceForContract(knex, contract, options = {}) {
   const vatRon = parseFloat((base * VAT_RATE).toFixed(2));
   const totalRon = parseFloat((base + vatRon).toFixed(2));
 
-  const issueDate = now.toISOString().slice(0, 10);
-  const dueDate = new Date(year, month, now.getDate() + 15)
-    .toISOString()
-    .slice(0, 10);
+  const issueDate = now.toISOString();
+  const dueDate = new Date(year, month, now.getDate() + 15).toISOString();
 
   const invoiceNumber = await nextInvoiceNumber(knex, year);
 
@@ -65,8 +62,8 @@ async function generateInvoiceForContract(knex, contract, options = {}) {
       contract_id: contract.id,
       issue_date: issueDate,
       due_date: dueDate,
-      period_start: periodStart.toISOString().slice(0, 10),
-      period_end: periodEnd.toISOString().slice(0, 10),
+      period_start: periodStart.toISOString(),
+      period_end: periodEnd.toISOString(),
       rent_eur: rentEur,
       bnr_rate: rate,
       rent_ron: rentRon,
@@ -101,7 +98,7 @@ async function generateMonthlyInvoices(knex, options = {}) {
 async function markOverdueInvoices(knex, graceDays = 5) {
   const limit = new Date();
   limit.setDate(limit.getDate() - graceDays);
-  const limitStr = limit.toISOString().slice(0, 10);
+  const limitStr = limit.toISOString();
 
   const overdue = await knex("invoices")
     .where({ status: "ISSUED" })

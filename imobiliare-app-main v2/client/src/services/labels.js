@@ -15,7 +15,7 @@ export const SPACE_STATUS = {
 };
 
 export const CONTRACT_STATUS = {
-  DRAFT: { label: 'Ciornă', color: 'warning' },
+  DRAFT: { label: 'Draft', color: 'warning' },
   ACTIVE: { label: 'Activ', color: 'success' },
   EXPIRED: { label: 'Expirat', color: 'secondary' },
   TERMINATED: { label: 'Reziliat', color: 'danger' },
@@ -46,5 +46,6 @@ export const ROLE = {
   admin: { label: 'Administrator', color: 'primary' },
   contabil: { label: 'Contabil', color: 'info' },
   tehnic: { label: 'Tehnic', color: 'warning' },
-  client: { label: 'Client', color: 'success' },
+  client: { label: 'Chiriaș', color: 'success' },
+  user: { label: 'Utilizator', color: 'secondary' },
 };

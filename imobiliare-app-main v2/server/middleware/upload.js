@@ -1,11 +1,15 @@
 // server/middleware/upload.js
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
+
+const UPLOAD_DIR = "uploads/";
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 // Configurare stocare pe disc
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads/"); // Folderul unde se salvează
+    fs.mkdir(UPLOAD_DIR, { recursive: true }, (err) => cb(err, UPLOAD_DIR));
   },
   filename: function (req, file, cb) {
     // Redenumim fișierul ca să fie unic (timestamp + extensie)

@@ -6,7 +6,7 @@
         <va-data-table :items="users" :columns="cols" :loading="loading">
           <template #cell(role)="{ value }"><va-badge :color="R[value]?.color" :text="R[value]?.label || value" /></template>
           <template #cell(actions)="{ row }">
-            <va-button preset="plain" color="danger" icon="delete" @click="remove(row.source.id)" />
+            <va-button v-if="row.source.role !== 'admin'" preset="plain" color="danger" icon="delete" @click="remove(row.source.id)" />
           </template>
         </va-data-table>
       </va-card-content>
@@ -27,10 +27,11 @@ export default {
     const users = ref([]);
     const loading = ref(false);
     const cols = [
+      { key: 'id', label: 'ID' },
       { key: 'full_name', label: 'Nume' },
       { key: 'email', label: 'Email' },
       { key: 'role', label: 'Rol' },
-      { key: 'actions', label: '' },
+      { key: 'actions', label: 'Acțiuni' },
     ];
     const load = async () => {
       loading.value = true;

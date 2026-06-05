@@ -13,11 +13,12 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "axios": "^1.7.9",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "duckduckgo-images-api": "^1.0.5",
     "express": "^5.2.1",
+    "googlethis": "^1.8.0",
     "helmet": "^8.1.0",
     "joi": "^18.0.2",
     "jsonwebtoken": "^9.0.3",
@@ -26,9 +27,12 @@
     "node-cron": "^3.0.3",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "pdfkit": "^0.18.0",
     "pg": "^8.17.2"
   },
   "devDependencies": {
+    "axios": "^1.17.0",
+    "g-i-s": "^2.1.7",
     "nodemon": "^3.1.11"
   }
 }

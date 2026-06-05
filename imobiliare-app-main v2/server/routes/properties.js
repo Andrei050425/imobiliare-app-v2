@@ -4,6 +4,8 @@ const passport = require("passport");
 const knex = require("knex")(require("../knexfile").development);
 const upload = require("../middleware/upload");
 const { validateProperty } = require("../middleware/validation");
+const fs = require("fs");
+const path = require("path");
 
 // Middleware pentru a proteja rutele (cere token valid)
 const auth = passport.authenticate("jwt", { session: false });
@@ -65,7 +67,7 @@ router.get("/:id", async (req, res) => {
     // Luăm toate pozele asociate
     const images = await knex("images")
       .where({ property_id: req.params.id })
-      .select("path");
+      .select("id", "path");
     property.images = images;
 
     res.json(property);
@@ -141,6 +143,91 @@ router.post(
     }
   },
 );
+
+// 3.5 PUT - Editează spațiu (Doar Autentificat, Admin sau Proprietar)
+router.put("/:id", auth, async (req, res) => {
+  try {
+    const property = await knex("properties").where({ id: req.params.id }).first();
+    if (!property) return res.status(404).json({ message: "Nu există spațiul." });
+    
+    if (req.user.role !== "admin" && property.user_id !== req.user.id) {
+      return res.status(403).json({ message: "Nu ai dreptul să editezi acest anunț." });
+    }
+
+    await knex("properties")
+      .where({ id: req.params.id })
+      .update({
+        title: req.body.title,
+        description: req.body.description,
+        price: req.body.price,
+        area: req.body.area,
+        address: req.body.address,
+        sector: req.body.sector || null,
+        status: req.body.status || "FREE",
+        category_id: req.body.category_id,
+        updated_at: knex.fn.now()
+      });
+
+    res.json({ message: "Anunț actualizat cu succes." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Eroare la actualizare." });
+  }
+});
+
+// 3.6 POST - Adaugă imagine la spațiu (Admin sau Proprietar)
+router.post("/:id/images", auth, upload.single("image"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "Fișier lipsă." });
+  try {
+    const property = await knex("properties").where({ id: req.params.id }).first();
+    if (!property) {
+      fs.unlinkSync(req.file.path);
+      return res.status(404).json({ message: "Nu există spațiul." });
+    }
+    if (req.user.role !== "admin" && property.user_id !== req.user.id) {
+      fs.unlinkSync(req.file.path);
+      return res.status(403).json({ message: "Nu ai dreptul." });
+    }
+
+    const cleanPath = req.file.path.replace(/\\/g, "/");
+    const [inserted] = await knex("images").insert({
+      path: cleanPath,
+      property_id: req.params.id
+    }).returning("*");
+
+    res.status(201).json(inserted);
+  } catch (err) {
+    console.error(err);
+    if (req.file) fs.unlinkSync(req.file.path);
+    res.status(500).json({ message: "Eroare la adăugarea imaginii." });
+  }
+});
+
+// 3.7 DELETE - Șterge imagine (Admin sau Proprietar)
+router.delete("/:id/images/:imageId", auth, async (req, res) => {
+  try {
+    const property = await knex("properties").where({ id: req.params.id }).first();
+    if (!property) return res.status(404).json({ message: "Nu există spațiul." });
+    if (req.user.role !== "admin" && property.user_id !== req.user.id) {
+      return res.status(403).json({ message: "Nu ai dreptul." });
+    }
+
+    const image = await knex("images").where({ id: req.params.imageId, property_id: req.params.id }).first();
+    if (!image) return res.status(404).json({ message: "Imaginea nu a fost găsită." });
+
+    await knex("images").where({ id: req.params.imageId }).del();
+
+    const filePath = path.join(__dirname, "..", image.path);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    res.json({ message: "Imagine ștearsă cu succes." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Eroare la ștergerea imaginii." });
+  }
+});
 
 // 4. DELETE - Șterge spațiu (Admin sau Proprietar)
 router.delete("/:id", auth, async (req, res) => {

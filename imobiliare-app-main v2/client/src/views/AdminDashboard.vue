@@ -44,12 +44,12 @@
             </template>
             
             <template #cell(actions)="{ row }">
-               <va-button 
+              <va-button 
                 preset="plain" 
                 icon="visibility" 
                 color="primary" 
                 class="mr-2"
-                @click="$router.push(`/space/${row.rowData.id}`)"
+                @click="$router.push(`/property/${row.rowData.id}`)"
               />
               <va-button 
                 preset="plain" 

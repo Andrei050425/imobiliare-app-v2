@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="page-title">Bun venit, {{ data.tenantName || 'client' }}</div>
+    <div class="page-title">Bun venit, {{ data.tenantName || 'chiriaș' }}</div>
     <div v-if="loading" class="text-center"><va-progress-circle indeterminate /></div>
     <div v-else-if="data.noTenant">
       <va-alert color="info">Contul tău nu este încă asociat unui chiriaș. Contactează administratorul.</va-alert>
@@ -20,13 +20,27 @@
       </va-card>
 
       <div class="row">
-        <div class="flex xs12 sm4"><kpi label="Contracte active" :value="data.activeContracts" icon="description" /></div>
-        <div class="flex xs12 sm4"><kpi label="Sold restant" :value="fmt(data.outstanding) + ' RON'" icon="account_balance_wallet" :color="data.outstanding > 0 ? 'danger' : 'success'" /></div>
-        <div class="flex xs12 sm4"><kpi label="Intervenții deschise" :value="data.openMaintenance" icon="build" /></div>
+        <div class="flex xs12 sm6"><kpi label="Contracte active" :value="data.activeContracts" icon="description" /></div>
+        <div class="flex xs12 sm6"><kpi label="Sold restant" :value="fmt(data.outstanding) + ' RON'" icon="account_balance_wallet" :color="data.outstanding > 0 ? 'danger' : 'success'" /></div>
       </div>
 
-      <div class="mt-3">
-        <va-button icon="add" @click="$router.push('/app/my-maintenance')">Solicită o intervenție</va-button>
+      <div v-if="data.rentedProperties && data.rentedProperties.length" class="mt-4">
+        <h4 class="va-h5 mb-3" style="color: var(--va-secondary)">Spațiile mele</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
+          <va-card v-for="prop in data.rentedProperties" :key="prop.id" style="border: 1px solid #eee; overflow: hidden;">
+            <img :src="getImageUrl(prop.image_path)" style="width:100%; height:180px; object-fit:cover" />
+            <va-card-content>
+              <div style="font-weight: 700; font-size: 1.15rem; margin-bottom: 0.5rem">{{ prop.title }}</div>
+              <div style="color: var(--va-secondary); font-size: 0.9rem; margin-bottom: 0.5rem">
+                <va-icon name="location_on" size="small" /> {{ prop.address }}
+              </div>
+              <div style="color: var(--va-text-primary); font-size: 0.95rem; margin-bottom: 1rem;">
+                <va-icon name="aspect_ratio" size="small" /> {{ prop.area }} m²
+              </div>
+              <va-button preset="secondary" color="primary" class="w-full" @click="$router.push(`/property/${prop.id}`)">Vizualizare detalii</va-button>
+            </va-card-content>
+          </va-card>
+        </div>
       </div>
     </div>
   </div>
@@ -53,7 +67,12 @@ export default {
       catch (e) { console.error(e); }
       finally { loading.value = false; }
     });
-    return { data, loading, fmt, dueColor };
+    const getImageUrl = (path) => {
+      if (!path) return 'https://via.placeholder.com/300x200?text=Fara+Poza';
+      return `http://localhost:3000/${path.replace(/\\/g, "/")}`;
+    };
+
+    return { data, loading, fmt, dueColor, getImageUrl };
   }
 };
 </script>

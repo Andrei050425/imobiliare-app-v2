@@ -3,7 +3,6 @@
     <div class="toolbar">
       <va-button preset="secondary" icon="arrow_back" @click="$router.back()">Înapoi</va-button>
       <span class="spacer"></span>
-      <va-button icon="print" @click="printInvoice">Printează / PDF</va-button>
     </div>
 
     <div v-if="loading" class="text-center"><va-progress-circle indeterminate /></div>
@@ -43,7 +42,7 @@
         <tbody>
           <tr><td>Chirie ({{ inv.rent_eur }} € × curs BNR {{ inv.bnr_rate }})</td><td class="r">{{ fmt(inv.rent_ron) }} RON</td></tr>
           <tr><td>Contravaloare utilități</td><td class="r">{{ fmt(inv.utilities_ron) }} RON</td></tr>
-          <tr><td>TVA (19%)</td><td class="r">{{ fmt(inv.vat_ron) }} RON</td></tr>
+          <tr><td>TVA ({{ vatPercent }}%)</td><td class="r">{{ fmt(inv.vat_ron) }} RON</td></tr>
         </tbody>
         <tfoot><tr><td class="total">TOTAL DE PLATĂ</td><td class="r total">{{ fmt(inv.total_ron) }} RON</td></tr></tfoot>
       </table>
@@ -54,7 +53,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '../services/api';
 import { INVOICE_STATUS } from '../services/labels';
@@ -71,8 +70,15 @@ export default {
       catch (e) { console.error(e); }
       finally { loading.value = false; }
     });
-    const printInvoice = () => window.print();
-    return { inv, loading, fmt, printInvoice, ST: INVOICE_STATUS };
+
+    const vatPercent = computed(() => {
+      if (!inv.value) return 21;
+      const baseSum = parseFloat(inv.value.rent_ron) + parseFloat(inv.value.utilities_ron);
+      const vatRon = parseFloat(inv.value.vat_ron);
+      return baseSum > 0 ? Math.round((vatRon / baseSum) * 100) : 21;
+    });
+
+    return { inv, loading, fmt, vatPercent, ST: INVOICE_STATUS };
   }
 };
 </script>

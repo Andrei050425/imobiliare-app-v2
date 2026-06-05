@@ -10,18 +10,35 @@
     <va-card>
       <va-card-content>
         <va-data-table :items="contracts" :columns="cols" :loading="loading">
-          <template #cell(period)="{ row }">{{ row.source.start_date }} → {{ row.source.end_date }}</template>
+          <template #cell(period)="{ row }">{{ fmtDate(row.source.start_date) }} → {{ fmtDate(row.source.end_date) }}</template>
           <template #cell(monthly_rent_eur)="{ value }">{{ value }} €</template>
           <template #cell(status)="{ value }">
             <va-badge :color="ST[value]?.color" :text="ST[value]?.label || value" />
           </template>
           <template #cell(actions)="{ row }">
             <va-button v-if="isAdmin && row.source.status === 'DRAFT'" preset="plain" color="success" icon="check_circle" title="Activează" @click="activate(row.source.id)" />
-            <va-button v-if="isAdmin && row.source.status === 'ACTIVE'" preset="plain" color="danger" icon="cancel" title="Reziliază" @click="terminate(row.source.id)" />
+            <va-button v-if="isAdmin && row.source.status === 'ACTIVE'" preset="plain" color="danger" icon="cancel" title="Reziliază" @click="openTerminate(row.source.id)" />
           </template>
         </va-data-table>
       </va-card-content>
     </va-card>
+
+    <va-modal v-model="showTerminateModal" title="Motiv Reziliere Contract" hide-default-actions>
+      <div class="modal-form">
+        <va-input 
+          v-model="terminateReason" 
+          type="textarea" 
+          label="Motivul complet al rezilierii" 
+          class="mb-2 w-100" 
+          :min-rows="4"
+        />
+        <p class="text-danger mt-2" style="font-size: 0.85rem">Atenție: Această acțiune este ireversibilă!</p>
+      </div>
+      <template #footer>
+        <va-button preset="secondary" @click="showTerminateModal = false">Anulează</va-button>
+        <va-button class="ml-2" color="danger" @click="confirmTerminate">Confirmă Rezilierea</va-button>
+      </template>
+    </va-modal>
 
     <va-modal v-model="showModal" title="Contract nou" hide-default-actions>
       <div class="modal-form">
@@ -49,7 +66,7 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useToast } from 'vuestic-ui';
 import api from '../services/api';
@@ -64,7 +81,17 @@ export default {
     const loading = ref(false);
     const statusFilter = ref(null);
     const showModal = ref(false);
-    const form = reactive({ billing_day: 1, deposit_eur: 0, utilities_ron: 0 });
+    const form = reactive({ billing_day: 1, deposit_eur: 0, utilities_ron: 0, start_date: '', end_date: '' });
+    
+    watch(() => form.start_date, (newDate) => {
+      if (newDate) {
+        const dateObj = new Date(newDate);
+        if (!isNaN(dateObj.getTime())) {
+          dateObj.setFullYear(dateObj.getFullYear() + 1);
+          form.end_date = dateObj.toISOString().split('T')[0];
+        }
+      }
+    });
     const tenantOpts = ref([]);
     const propertyOpts = ref([]);
     const isAdmin = computed(() => store.getters.isAdmin);
@@ -76,9 +103,15 @@ export default {
       { key: 'period', label: 'Perioadă' },
       { key: 'monthly_rent_eur', label: 'Chirie' },
       { key: 'status', label: 'Stare' },
-      { key: 'actions', label: '' },
+      { key: 'actions', label: 'Acțiuni' },
     ];
-    const statusOptions = Object.entries(CONTRACT_STATUS).map(([value, v]) => ({ value, label: v.label }));
+    const statusOptions = Object.entries(CONTRACT_STATUS)
+      .filter(([value]) => value !== 'DRAFT')
+      .map(([value, v]) => ({ value, label: v.label }));
+    const fmtDate = (d) => {
+      if (!d) return '';
+      return new Date(d).toLocaleString('ro-RO');
+    };
 
     const load = async () => {
       loading.value = true;
@@ -109,14 +142,32 @@ export default {
       try { await api.patch(`/contracts/${id}/activate`); init({ message: 'Contract activat.', color: 'success' }); load(); }
       catch (e) { init({ message: e.response?.data?.message || 'Eroare.', color: 'danger' }); }
     };
-    const terminate = async (id) => {
-      const reason = prompt('Motivul rezilierii:');
-      try { await api.patch(`/contracts/${id}/terminate`, { reason }); init({ message: 'Contract reziliat.', color: 'success' }); load(); }
+    const terminateId = ref(null);
+    const terminateReason = ref('');
+    const showTerminateModal = ref(false);
+
+    const openTerminate = (id) => {
+      terminateId.value = id;
+      terminateReason.value = '';
+      showTerminateModal.value = true;
+    };
+
+    const confirmTerminate = async () => {
+      if (!terminateReason.value.trim()) {
+        init({ message: 'Motivul este obligatoriu.', color: 'warning' });
+        return;
+      }
+      try { 
+        await api.patch(`/contracts/${terminateId.value}/terminate`, { reason: terminateReason.value }); 
+        init({ message: 'Contract reziliat.', color: 'success' }); 
+        showTerminateModal.value = false;
+        load(); 
+      }
       catch (e) { init({ message: e.response?.data?.message || 'Eroare.', color: 'danger' }); }
     };
 
     onMounted(load);
-    return { contracts, loading, statusFilter, statusOptions, cols, ST: CONTRACT_STATUS, isAdmin, showModal, form, tenantOpts, propertyOpts, openCreate, save, activate, terminate, load };
+    return { contracts, loading, statusFilter, statusOptions, cols, ST: CONTRACT_STATUS, isAdmin, showModal, form, tenantOpts, propertyOpts, openCreate, save, activate, terminateId, terminateReason, showTerminateModal, openTerminate, confirmTerminate, load, fmtDate };
   }
 };
 </script>

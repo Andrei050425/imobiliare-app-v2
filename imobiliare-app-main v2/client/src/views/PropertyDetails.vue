@@ -55,10 +55,15 @@
                     </div>
                   </div>
 
-                  <div class="mt-4">
-                    <va-button block color="primary" @click="contactOwner">
-                      Contactează Proprietarul
+                  <div class="mt-4" v-if="property.status === 'FREE'">
+                    <va-button block color="primary" @click="requestOffer">
+                      Cerere ofertă
                     </va-button>
+                  </div>
+                  <div class="mt-4" v-else>
+                    <va-alert color="info" outline class="text-center w-full">
+                      Acest spațiu nu mai este disponibil pentru închiriere.
+                    </va-alert>
                   </div>
                 </va-card-content>
               </va-card>
@@ -72,13 +77,16 @@
 
 <script>
 import { ref, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import { useStore } from 'vuex';
 import { useToast } from 'vuestic-ui';
 import api from '../services/api';
 
 export default {
   setup() {
     const route = useRoute();
+    const router = useRouter();
+    const store = useStore();
     const { init: notify } = useToast();
     
     const property = ref(null);
@@ -104,13 +112,25 @@ export default {
       return `http://localhost:3000/${cleanPath}`; 
     };
 
-    const contactOwner = () => {
-        notify({ message: 'Funcționalitate în lucru! Sună la 07xx...', color: 'info' });
+    const requestOffer = async () => {
+        if (!store.getters.isLoggedIn) {
+          notify({ message: 'Trebuie să te loghezi pentru a cere o ofertă.', color: 'warning' });
+          router.push('/login');
+          return;
+        }
+
+        try {
+          await api.post('/offers', { property_id: route.params.id });
+          notify({ message: 'Cererea ta de ofertă a fost trimisă cu succes!', color: 'success' });
+        } catch (err) {
+          const msg = err.response?.data?.error || err.response?.data?.message || err.message;
+          notify({ message: `A apărut o eroare: ${msg}`, color: 'danger' });
+        }
     };
 
     onMounted(fetchProperty);
 
-    return { property, loading, getImageUrl, contactOwner };
+    return { property, loading, getImageUrl, requestOffer };
   }
 }
 </script>
