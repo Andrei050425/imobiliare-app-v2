@@ -20,12 +20,22 @@
           <template #cell(price)="{ value }">{{ value }} €</template>
           <template #cell(status)="{ value }"><va-badge :color="ST[value]?.color" :text="ST[value]?.label || value" /></template>
           <template #cell(actions)="{ row }">
+            <va-button preset="plain" icon="map" title="Vezi pe hartă" @click="openMapModal(row.source)" />
             <va-button preset="plain" icon="edit" @click="$router.push(`/app/properties/edit/${row.source.id}`)" />
             <va-button v-if="isAdmin" preset="plain" color="danger" icon="delete" @click="remove(row.source.id)" />
           </template>
         </va-data-table>
       </va-card-content>
     </va-card>
+
+    <va-modal v-model="showMapModal" :title="`Localizare pe hartă: ${selectedProperty?.title || ''}`" size="large" hide-default-actions>
+      <div v-if="selectedProperty" style="height: 450px; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0;">
+        <PropertyMap :properties="[selectedProperty]" />
+      </div>
+      <template #footer>
+        <va-button preset="secondary" @click="showMapModal = false">Închide</va-button>
+      </template>
+    </va-modal>
   </div>
 </template>
 
@@ -35,9 +45,11 @@ import { useStore } from 'vuex';
 import { useToast } from 'vuestic-ui';
 import api from '../services/api';
 import { SPACE_STATUS } from '../services/labels';
+import PropertyMap from '../components/PropertyMap.vue';
 
 export default {
   name: 'Properties',
+  components: { PropertyMap },
   setup() {
     const store = useStore();
     const { init } = useToast();
@@ -45,6 +57,12 @@ export default {
     const loading = ref(false);
     const search = ref('');
     const statusFilter = ref(null);
+    const showMapModal = ref(false);
+    const selectedProperty = ref(null);
+    const openMapModal = (prop) => {
+      selectedProperty.value = prop;
+      showMapModal.value = true;
+    };
     const isAdmin = computed(() => store.getters.isAdmin);
     const cols = [
       { key: 'image', label: 'Imagine' },
@@ -84,7 +102,7 @@ export default {
       return `http://localhost:3000/${path.replace(/\\/g, '/')}`;
     };
     onMounted(load);
-    return { items, loading, search, statusFilter, statusOptions, cols, ST: SPACE_STATUS, isAdmin, load, remove, getImageUrl };
+    return { items, loading, search, statusFilter, statusOptions, cols, ST: SPACE_STATUS, isAdmin, showMapModal, selectedProperty, openMapModal, load, remove, getImageUrl };
   }
 };
 </script>

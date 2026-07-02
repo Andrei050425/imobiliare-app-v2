@@ -4,6 +4,7 @@ const passport = require("passport");
 const knex = require("knex")(require("../knexfile").development);
 const upload = require("../middleware/upload");
 const { validateProperty } = require("../middleware/validation");
+const { geocodeAddress } = require("../utils/geocoder");
 const fs = require("fs");
 const path = require("path");
 
@@ -11,10 +12,10 @@ const path = require("path");
 const auth = passport.authenticate("jwt", { session: false });
 
 // 1. GET ALL - Vezi spațiile, cu filtre opționale (Public)
-// Query params: sector, status, category_id, q (căutare în titlu/adresă)
+// Query params: sector, status, category_id, q (căutare în titlu/adresă), min_lat, max_lat, min_lng, max_lng
 router.get("/", async (req, res) => {
   try {
-    const { sector, status, category_id, q } = req.query;
+    const { sector, status, category_id, q, min_lat, max_lat, min_lng, max_lng } = req.query;
 
     let query = knex("properties")
       .join("categories", "properties.category_id", "categories.id")
@@ -37,6 +38,11 @@ router.get("/", async (req, res) => {
           `%${q}%`,
         );
       });
+    }
+    if (min_lat && max_lat && min_lng && max_lng) {
+      query = query
+        .whereBetween("properties.latitude", [parseFloat(min_lat), parseFloat(max_lat)])
+        .whereBetween("properties.longitude", [parseFloat(min_lng), parseFloat(max_lng)]);
     }
 
     const properties = await query;
@@ -103,6 +109,8 @@ router.post(
     console.log("------------------------------------------------");
 
     try {
+      const { latitude, longitude } = await geocodeAddress(req.body.address, req.body.sector);
+
       await knex.transaction(async (trx) => {
         // Pas 1: Inserăm proprietatea
         const [newProp] = await trx("properties")
@@ -116,6 +124,8 @@ router.post(
             status: req.body.status || "FREE",
             category_id: req.body.category_id,
             user_id: req.user.id,
+            latitude: req.body.latitude ? parseFloat(req.body.latitude) : latitude,
+            longitude: req.body.longitude ? parseFloat(req.body.longitude) : longitude,
           })
           .returning("id");
 
@@ -154,6 +164,8 @@ router.put("/:id", auth, async (req, res) => {
       return res.status(403).json({ message: "Nu ai dreptul să editezi acest anunț." });
     }
 
+    const { latitude, longitude } = await geocodeAddress(req.body.address, req.body.sector);
+
     await knex("properties")
       .where({ id: req.params.id })
       .update({
@@ -165,6 +177,8 @@ router.put("/:id", auth, async (req, res) => {
         sector: req.body.sector || null,
         status: req.body.status || "FREE",
         category_id: req.body.category_id,
+        latitude: req.body.latitude ? parseFloat(req.body.latitude) : latitude,
+        longitude: req.body.longitude ? parseFloat(req.body.longitude) : longitude,
         updated_at: knex.fn.now()
       });
 

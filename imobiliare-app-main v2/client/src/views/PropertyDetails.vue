@@ -33,6 +33,16 @@
 
               <h3 class="mt-4">Descriere</h3>
               <p style="white-space: pre-line;">{{ property.description }}</p>
+
+              <!-- Harta de Localizare -->
+              <div v-if="property.latitude && property.longitude" class="mt-5">
+                <h3 class="mb-3 d-flex align-center gap-2">
+                  <va-icon name="map" color="primary" /> Localizare pe hartă
+                </h3>
+                <div style="height: 380px; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0;">
+                  <PropertyMap :properties="[property]" />
+                </div>
+              </div>
             </div>
 
             <div class="flex xs12 md4">
@@ -81,8 +91,10 @@ import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { useToast } from 'vuestic-ui';
 import api from '../services/api';
+import PropertyMap from '../components/PropertyMap.vue';
 
 export default {
+  components: { PropertyMap },
   setup() {
     const route = useRoute();
     const router = useRouter();
