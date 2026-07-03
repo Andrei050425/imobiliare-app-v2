@@ -15,11 +15,42 @@
       </va-button>
 
       <va-card>
-        <va-image 
-          :src="getImageUrl(property.images?.[0]?.path)" 
-          style="height: 400px; width: 100%;"
-          fit="cover"
-        />
+        <!-- GALERIE FOTO INTERACTIVĂ -->
+        <div class="property-gallery-wrapper">
+          <div class="main-image-container">
+            <img 
+              :src="getImageUrl(property.images?.[currentImgIdx || 0]?.path)" 
+              class="main-gallery-img"
+              alt="Imagine proprietate"
+            />
+            
+            <div v-if="property.images && property.images.length > 1" class="gallery-nav-arrows">
+              <button class="nav-arrow left-arrow" @click.stop="prevImg" title="Imaginea anterioară">
+                <va-icon name="chevron_left" />
+              </button>
+              <button class="nav-arrow right-arrow" @click.stop="nextImg" title="Imaginea următoare">
+                <va-icon name="chevron_right" />
+              </button>
+            </div>
+
+            <div v-if="property.images && property.images.length > 1" class="gallery-counter">
+              <va-icon name="photo_camera" size="small" class="mr-1" />
+              <span>{{ (currentImgIdx || 0) + 1 }} / {{ property.images.length }}</span>
+            </div>
+          </div>
+
+          <div v-if="property.images && property.images.length > 1" class="thumbnails-strip">
+            <div 
+              v-for="(img, idx) in property.images" 
+              :key="img.id || idx"
+              class="thumb-item"
+              :class="{ 'active-thumb': idx === (currentImgIdx || 0) }"
+              @click="currentImgIdx = idx"
+            >
+              <img :src="getImageUrl(img.path)" class="thumb-img" />
+            </div>
+          </div>
+        </div>
 
         <va-card-content>
           <div class="row">
@@ -40,7 +71,7 @@
                   <va-icon name="map" color="primary" /> Localizare pe hartă
                 </h3>
                 <div style="height: 380px; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0;">
-                  <PropertyMap :properties="[property]" />
+                  <PropertyMap :properties="[property]" :simple-pin="true" />
                 </div>
               </div>
             </div>
@@ -65,7 +96,12 @@
                     </div>
                   </div>
 
-                  <div class="mt-4" v-if="property.status === 'FREE'">
+                  <div class="mt-4" v-if="isAdmin">
+                    <va-button block color="primary" icon="edit" @click="$router.push(`/app/properties/edit/${property.id}`)">
+                      Editează Spațiul
+                    </va-button>
+                  </div>
+                  <div class="mt-4" v-else-if="property.status === 'FREE'">
                     <va-button block color="primary" @click="requestOffer">
                       Cerere ofertă
                     </va-button>
@@ -86,7 +122,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { useToast } from 'vuestic-ui';
@@ -101,11 +137,24 @@ export default {
     const store = useStore();
     const { init: notify } = useToast();
     
+    const isAdmin = computed(() => store.getters.isAdmin);
     const property = ref(null);
     const loading = ref(true);
+    const currentImgIdx = ref(0);
+
+    const nextImg = () => {
+      if (!property.value?.images?.length) return;
+      currentImgIdx.value = (currentImgIdx.value + 1) % property.value.images.length;
+    };
+
+    const prevImg = () => {
+      if (!property.value?.images?.length) return;
+      currentImgIdx.value = (currentImgIdx.value - 1 + property.value.images.length) % property.value.images.length;
+    };
 
     const fetchProperty = async () => {
       try {
+        currentImgIdx.value = 0;
         // Luam ID-ul din URL (ex: /property/5)
         const id = route.params.id;
         const res = await api.get(`/properties/${id}`);
@@ -142,7 +191,114 @@ export default {
 
     onMounted(fetchProperty);
 
-    return { property, loading, getImageUrl, requestOffer };
+    return { property, loading, getImageUrl, requestOffer, isAdmin, currentImgIdx, nextImg, prevImg };
   }
 }
 </script>
+
+<style scoped>
+.property-gallery-wrapper {
+  position: relative;
+  background: #ffffff;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+}
+.main-image-container {
+  position: relative;
+  width: 100%;
+  height: 440px;
+  background: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.main-gallery-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.gallery-nav-arrows {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  pointer-events: none;
+}
+.nav-arrow {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  color: #1e293b;
+}
+.nav-arrow:hover {
+  background: #ffffff;
+  transform: scale(1.1);
+}
+.gallery-counter {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  background: rgba(15, 23, 42, 0.8);
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.thumbnails-strip {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #f8fafc;
+  overflow-x: auto;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+.thumb-item {
+  width: 96px;
+  height: 68px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  opacity: 0.65;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  border: 2px solid #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+.thumb-item:hover {
+  opacity: 0.95;
+  border-color: #94a3b8;
+}
+.thumb-item.active-thumb {
+  opacity: 1;
+  border-color: #2563eb;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+.thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+</style>

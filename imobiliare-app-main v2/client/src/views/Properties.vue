@@ -67,8 +67,26 @@
               <va-icon name="storefront" color="primary" /> Specificații Spațiu Comercial
             </div>
             
-            <div v-if="detailsData.images && detailsData.images.length > 0" class="mb-4 rounded-lg overflow-hidden border shadow-sm" style="max-height: 220px;">
-              <img :src="getImageUrl(detailsData.images[0].path)" style="width: 100%; height: 220px; object-fit: cover; display: block;" />
+            <div v-if="detailsData.images && detailsData.images.length > 0" class="mb-4 rounded-lg overflow-hidden border shadow-sm">
+              <div style="position: relative; height: 220px; background: #1e293b;">
+                <img :src="getImageUrl(detailsData.images[detailsImgIdx || 0].path)" style="width: 100%; height: 220px; object-fit: cover; display: block;" />
+                <div v-if="detailsData.images.length > 1" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 8px; pointer-events: none;">
+                  <button @click.stop="detailsImgIdx = (detailsImgIdx - 1 + detailsData.images.length) % detailsData.images.length" style="pointer-events: auto; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.85); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #1e293b;">
+                    <va-icon name="chevron_left" size="small" />
+                  </button>
+                  <button @click.stop="detailsImgIdx = (detailsImgIdx + 1) % detailsData.images.length" style="pointer-events: auto; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.85); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #1e293b;">
+                    <va-icon name="chevron_right" size="small" />
+                  </button>
+                </div>
+                <div v-if="detailsData.images.length > 1" style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.75); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                  {{ (detailsImgIdx || 0) + 1 }} / {{ detailsData.images.length }}
+                </div>
+              </div>
+              <div v-if="detailsData.images.length > 1" style="display: flex; gap: 6px; padding: 8px; background: #f8fafc; overflow-x: auto; border-top: 1px solid #e2e8f0;">
+                <div v-for="(img, idx) in detailsData.images" :key="idx" @click="detailsImgIdx = idx" style="width: 50px; height: 36px; border-radius: 4px; overflow: hidden; cursor: pointer; flex-shrink: 0; border: 2px solid transparent; transition: all 0.2s;" :style="{ borderColor: idx === (detailsImgIdx || 0) ? '#3b82f6' : 'transparent', opacity: idx === (detailsImgIdx || 0) ? 1 : 0.6 }">
+                  <img :src="getImageUrl(img.path)" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+                </div>
+              </div>
             </div>
 
             <div class="info-grid mt-2">
@@ -203,6 +221,7 @@ export default {
     const showDetailsModal = ref(false);
     const loadingDetails = ref(false);
     const detailsData = ref(null);
+    const detailsImgIdx = ref(0);
 
     const openMapModal = (prop) => {
       selectedProperty.value = prop;
@@ -213,6 +232,7 @@ export default {
       showDetailsModal.value = true;
       loadingDetails.value = true;
       detailsData.value = null;
+      detailsImgIdx.value = 0;
       try {
         const res = await api.get(`/properties/${prop.id}`);
         detailsData.value = res.data;
@@ -272,7 +292,7 @@ export default {
     return { 
       items, loading, search, statusFilter, statusOptions, cols, ST: SPACE_STATUS, isAdmin, 
       showMapModal, selectedProperty, openMapModal, 
-      showDetailsModal, loadingDetails, detailsData, openDetailsModal, formatDate,
+      showDetailsModal, loadingDetails, detailsData, detailsImgIdx, openDetailsModal, formatDate,
       load, remove, getImageUrl 
     };
   }

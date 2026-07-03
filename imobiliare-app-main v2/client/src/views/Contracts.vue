@@ -126,9 +126,16 @@ export default {
       Object.keys(form).forEach(k => delete form[k]);
       form.billing_day = 1; form.deposit_eur = 0; form.utilities_ron = 0;
       const tenants = (await api.get('/tenants')).data.filter(t => t.status !== 'OVERDUE');
-      tenantOpts.value = tenants.map(t => ({ value: t.id, label: `${t.company_name} (${t.cui})` }));
+      tenantOpts.value = tenants.map(t => ({ value: t.id, label: `👤 ${t.company_name}  —  CUI: ${t.cui}` }));
       const props = (await api.get('/properties', { params: { status: 'FREE' } })).data;
-      propertyOpts.value = props.map(p => ({ value: p.id, label: `${p.title} — ${p.address}` }));
+      propertyOpts.value = props.map(p => {
+        const cleanAddr = p.address
+          .replace(/,\s*Bucure[sș]ti/gi, '')
+          .replace(/,\s*Rom[aâ]nia/gi, '')
+          .replace(/,\s*Sector\s*\d/gi, '')
+          .trim();
+        return { value: p.id, label: `🏢 ${p.title}  —  📍 ${cleanAddr}` };
+      });
       showModal.value = true;
     };
     const save = async () => {
@@ -172,4 +179,4 @@ export default {
 };
 </script>
 
-<style scoped>.modal-form { min-width: 460px; }</style>
+<style scoped>.modal-form { min-width: 600px; max-width: 100%; }</style>

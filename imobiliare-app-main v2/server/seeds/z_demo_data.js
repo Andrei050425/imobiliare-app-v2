@@ -1,4 +1,5 @@
 const bcrypt = require("bcryptjs");
+const { geocodeAddress } = require("../utils/geocoder");
 
 /**
  * Seed cu date demonstrative pentru SANTA.
@@ -46,7 +47,8 @@ exports.seed = async function (knex) {
   ];
   const insertedSpaces = [];
   for (const s of spaces) {
-    const [row] = await knex("properties").insert({ ...s, user_id: admin.id }).returning("*");
+    const geo = await geocodeAddress(s.address, s.sector);
+    const [row] = await knex("properties").insert({ ...s, latitude: geo.latitude, longitude: geo.longitude, user_id: admin.id }).returning("*");
     insertedSpaces.push(row);
   }
 

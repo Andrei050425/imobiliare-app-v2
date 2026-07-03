@@ -35,6 +35,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    simplePin: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ["select-property"],
   setup(props, { emit }) {
@@ -143,6 +147,21 @@ export default {
       });
     };
 
+    const createSimpleIcon = (prop) => {
+      const catClass = getCategoryClass(prop.category_name);
+      return L.divIcon({
+        className: "custom-simple-pin-wrapper",
+        html: `
+          <div class="simple-location-pin ${catClass}">
+            <i class="material-icons" style="color: white; font-size: 22px;">place</i>
+          </div>
+          <div class="simple-pin-shadow"></div>
+        `,
+        iconSize: [40, 48],
+        iconAnchor: [20, 48],
+      });
+    };
+
     const renderMarkers = () => {
       if (!clusterGroup || !map) return;
 
@@ -157,42 +176,49 @@ export default {
         const lat = parseFloat(p.latitude);
         const lng = parseFloat(p.longitude);
 
-        const icon = createPriceIcon(p, p.id === props.hoveredId);
-        const marker = L.marker([lat, lng], { icon });
+        if (props.simplePin) {
+          const icon = createSimpleIcon(p);
+          const marker = L.marker([lat, lng], { icon, interactive: false });
+          markersMap.set(p.id, marker);
+          clusterGroup.addLayer(marker);
+        } else {
+          const icon = createPriceIcon(p, p.id === props.hoveredId);
+          const marker = L.marker([lat, lng], { icon });
 
-        // Conținut HTML pentru Popup
-        const catClass = getCategoryClass(p.category_name);
-        const popupHtml = `
-          <div class="map-popup-card">
-            <div class="popup-img-wrapper">
-              <img src="${getImageUrl(p.image_path)}" class="popup-img" alt="${p.title}" />
-              <span class="popup-cat-badge ${catClass}">${p.category_name || "Comercial"}</span>
-            </div>
-            <div class="popup-body">
-              <h4 class="popup-title">${p.title}</h4>
-              <p class="popup-address"><i class="va-icon material-icons">place</i> ${p.address}</p>
-              <div class="popup-footer">
-                <div class="popup-price-box">
-                  <span class="popup-price">${formatPrice(p.price)} €</span>
-                  <span class="popup-area">${p.area} m²</span>
+          // Conținut HTML pentru Popup
+          const catClass = getCategoryClass(p.category_name);
+          const popupHtml = `
+            <div class="map-popup-card">
+              <div class="popup-img-wrapper">
+                <img src="${getImageUrl(p.image_path)}" class="popup-img" alt="${p.title}" />
+                <span class="popup-cat-badge ${catClass}">${p.category_name || "Comercial"}</span>
+              </div>
+              <div class="popup-body">
+                <h4 class="popup-title">${p.title}</h4>
+                <p class="popup-address"><i class="va-icon material-icons">place</i> ${p.address}</p>
+                <div class="popup-footer">
+                  <div class="popup-price-box">
+                    <span class="popup-price">${formatPrice(p.price)} €</span>
+                    <span class="popup-area">${p.area} m²</span>
+                  </div>
+                  <button class="popup-action-btn" onclick="window.dispatchEvent(new CustomEvent('map-select-prop', { detail: '${p.id}' }))">
+                    Detalii →
+                  </button>
                 </div>
-                <button class="popup-action-btn" onclick="window.dispatchEvent(new CustomEvent('map-select-prop', { detail: '${p.id}' }))">
-                  Detalii →
-                </button>
               </div>
             </div>
-          </div>
-        `;
+          `;
 
-        marker.bindPopup(popupHtml, {
-          closeButton: false,
-          className: "sleek-map-popup",
-          maxWidth: 280,
-          minWidth: 260,
-        });
+          marker.bindPopup(popupHtml, {
+            closeButton: false,
+            className: "sleek-map-popup",
+            maxWidth: 280,
+            minWidth: 260,
+          });
 
-        markersMap.set(p.id, marker);
-        clusterGroup.addLayer(marker);
+          markersMap.set(p.id, marker);
+          clusterGroup.addLayer(marker);
+        }
       });
 
       // Dacă avem un singur spațiu, centrăm harta automat pe el la zoom 15
@@ -214,6 +240,7 @@ export default {
     watch(
       () => props.hoveredId,
       (newId, oldId) => {
+        if (props.simplePin) return;
         if (oldId && markersMap.has(oldId)) {
           const oldMarker = markersMap.get(oldId);
           const oldProp = props.properties.find((p) => p.id === oldId);
@@ -351,6 +378,42 @@ export default {
 
 .map-price-badge.hover-pulse {
   animation: pin-glow 1.5s infinite;
+}
+
+/* --- SIMPLE PIN PENTRU DETALII SPAȚIU --- */
+.simple-location-pin {
+  width: 40px;
+  height: 40px;
+  border-radius: 50% 50% 50% 0;
+  background: #2563eb;
+  position: absolute;
+  transform: rotate(-45deg);
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35), inset 0 2px 0 rgba(255, 255, 255, 0.4);
+  border: 2.5px solid #ffffff;
+  z-index: 2;
+}
+.simple-location-pin i {
+  transform: rotate(45deg);
+}
+.simple-location-pin.cat-office { background: #2563eb; }
+.simple-location-pin.cat-retail { background: #d97706; }
+.simple-location-pin.cat-industrial { background: #10b981; }
+.simple-location-pin.cat-default { background: #6366f1; }
+
+.simple-pin-shadow {
+  position: absolute;
+  width: 20px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  left: 10px;
+  top: 40px;
+  z-index: 1;
 }
 
 /* --- CLUSTERS CUSTOM --- */
