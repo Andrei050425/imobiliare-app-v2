@@ -68,10 +68,8 @@
           <div class="flex xs6"><va-input v-model.number="offerData.price" type="number" label="Chirie lunară (EUR)" class="mb-2" @update:modelValue="offerData.deposit_eur = offerData.price * 2" /></div>
           <div class="flex xs6"><va-input v-model.number="offerData.deposit_eur" type="number" label="Garanție (EUR)" class="mb-2" /></div>
         </div>
-        <div class="row">
-          <div class="flex xs12"><va-input v-model.number="offerData.utilities_ron" type="number" label="Utilități/lună (RON)" class="mb-2" /></div>
-        </div>
         
+
         <va-input 
           v-model="offerData.details" 
           label="Detalii / Mesaj" 
@@ -88,7 +86,6 @@
         <va-input :modelValue="selectedDetails.property_title" label="Spațiu vizat" class="mb-2" readonly />
         <va-input :modelValue="selectedDetails.offer_price + ' EUR'" label="Chirie ofertată" class="mb-2" readonly />
         <va-input :modelValue="selectedDetails.deposit_eur ? (selectedDetails.deposit_eur + ' EUR') : '-'" label="Garanție" class="mb-2" readonly />
-        <va-input :modelValue="selectedDetails.utilities_ron ? (selectedDetails.utilities_ron + ' RON') : '-'" label="Utilități" class="mb-2" readonly />
         <div class="row">
           <div class="flex xs6"><va-input :modelValue="selectedDetails.start_date || '-'" label="Data început" class="mb-2" readonly /></div>
           <div class="flex xs6"><va-input :modelValue="selectedDetails.end_date || '-'" label="Data sfârșit" class="mb-2" readonly /></div>

@@ -41,7 +41,6 @@
         <thead><tr><th>Denumire</th><th class="r">Valoare</th></tr></thead>
         <tbody>
           <tr><td>Chirie ({{ inv.rent_eur }} € × curs BNR {{ inv.bnr_rate }})</td><td class="r">{{ fmt(inv.rent_ron) }} RON</td></tr>
-          <tr><td>Contravaloare utilități</td><td class="r">{{ fmt(inv.utilities_ron) }} RON</td></tr>
           <tr><td>TVA ({{ vatPercent }}%)</td><td class="r">{{ fmt(inv.vat_ron) }} RON</td></tr>
         </tbody>
         <tfoot><tr><td class="total">TOTAL DE PLATĂ</td><td class="r total">{{ fmt(inv.total_ron) }} RON</td></tr></tfoot>

@@ -44,7 +44,6 @@
               <strong>Perioadă contract:</strong> {{ parsedDetails(selectedOffer.offer_details).start_date }} &rarr; {{ parsedDetails(selectedOffer.offer_details).end_date }}
             </div>
             <div class="mb-2"><strong>Garanție:</strong> {{ parsedDetails(selectedOffer.offer_details).deposit_eur }} EUR</div>
-            <div class="mb-2"><strong>Utilități/lună:</strong> {{ parsedDetails(selectedOffer.offer_details).utilities_ron }} RON</div>
             <hr class="my-3" v-if="parsedDetails(selectedOffer.offer_details).message" />
             <p style="white-space: pre-line;" v-if="parsedDetails(selectedOffer.offer_details).message">{{ parsedDetails(selectedOffer.offer_details).message }}</p>
           </va-card-content>

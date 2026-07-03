@@ -49,80 +49,123 @@ body { margin: 0; background: var(--santa-bg); }
   margin-left: 0.85rem !important;
 }
 
-/* Styling pentru listele dropdown din va-select - Căsuțe mari, spațioase, ordonate și elastice */
+/* Design minimalist și modern pentru listele dropdown din toată aplicația */
 .va-select-option-list,
-.va-select-dropdown__options-wrapper,
-.va-dropdown__content {
-  padding: 12px !important;
-  background: #f8fafc !important;
-  border-radius: 12px !important;
-  min-width: 480px !important;
-  width: auto !important;
-  max-width: 90vw !important;
-  max-height: 420px !important;
+.va-select-dropdown__options-wrapper {
+  padding: 6px !important;
+  background: #ffffff !important;
+  border-radius: 8px !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  max-height: 280px !important;
   overflow-y: auto !important;
+  overflow-x: hidden !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 10px !important;
+  gap: 4px !important;
   box-sizing: border-box !important;
+  width: auto !important;
+  min-width: auto !important;
+  max-width: none !important;
 }
 
 .va-select-option,
 .va-select-option-list__option,
 .va-select-dropdown__options-wrapper .va-select-option {
-  --va-select-option-list-option-min-height: 76px !important;
+  --va-select-option-list-option-min-height: 48px !important;
   --va-select-option-list-option-height: auto !important;
   --va-select-option-list-option-max-height: none !important;
-  --va-select-option-list-option-display: block !important;
-  min-height: 76px !important;
+  min-height: 48px !important;
   height: auto !important;
   max-height: none !important;
-  padding: 16px 20px !important;
+  padding: 8px 12px !important;
   margin: 0 !important;
   background: #ffffff !important;
-  border: 1.5px solid #cbd5e1 !important;
-  border-radius: 10px !important;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05) !important;
-  display: block !important;
-  line-height: 1.6 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  line-height: 1.3 !important;
   white-space: normal !important;
   word-wrap: break-word !important;
   overflow-wrap: break-word !important;
   overflow: visible !important;
-  transition: all 0.2s ease-in-out !important;
+  transition: all 0.15s ease !important;
   cursor: pointer !important;
   box-sizing: border-box !important;
   width: 100% !important;
+  color: #334155 !important;
+  font-weight: 400 !important;
+  font-size: 0.9rem !important;
 }
 
-/* Stare hover, activă sau selectată pentru căsuța opțiunii */
+/* Stare hover sau selectată */
 .va-select-option:hover,
 .va-select-option--highlighted,
-.va-select-option-list__option:hover,
+.va-select-option-list__option:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+  font-weight: 500 !important;
+}
+
 .va-select-option--selected,
 .va-select-option-list__option--selected {
   background: #eff6ff !important;
   border-color: #3b82f6 !important;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15) !important;
-  transform: translateY(-1px) !important;
+  color: #2563eb !important;
+  font-weight: 600 !important;
 }
 
 .va-select-option__content,
 .va-select-option-list__option-content,
 [class*="va-select-option__content"] {
-  line-height: 1.6 !important;
+  line-height: 1.3 !important;
   padding: 0 !important;
   margin: 0 !important;
   white-space: normal !important;
   word-wrap: break-word !important;
   overflow-wrap: break-word !important;
-  display: block !important;
+  display: flex !important;
+  align-items: center !important;
   width: 100% !important;
   height: auto !important;
   max-height: none !important;
   overflow: visible !important;
+  color: inherit !important;
+  font-weight: inherit !important;
+  font-size: inherit !important;
+}
+
+/* Styling minimalist pentru bara de căutare din interiorul listei dropdown */
+.va-select-content__autocomplete,
+.va-select-dropdown__content-search-input,
+.va-select-option-list .va-input-wrapper {
+  margin-bottom: 4px !important;
+  padding: 2px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+.va-select-content__autocomplete input,
+.va-select-dropdown__content-search-input input,
+.va-select-option-list input {
+  padding: 6px 10px !important;
+  font-size: 0.85rem !important;
+  border-radius: 4px !important;
+  border: 1px solid #cbd5e1 !important;
+  background: #f8fafc !important;
   color: #1e293b !important;
-  font-weight: 500 !important;
-  font-size: 0.95rem !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+}
+.va-select-content__autocomplete input:focus,
+.va-select-dropdown__content-search-input input:focus,
+.va-select-option-list input:focus {
+  border-color: #3b82f6 !important;
+  background: #ffffff !important;
 }
 </style>

@@ -23,7 +23,7 @@
 
     <va-modal v-model="showModal" title="Intervenție nouă" hide-default-actions>
       <div class="modal-form">
-        <va-select v-model="form.property_id" :options="propertyOpts" text-by="label" value-by="value" label="Spațiu" class="mb-2" />
+        <va-select v-model="form.property_id" :options="propertyOpts" text-by="label" value-by="value" label="Spațiu" searchable placeholder="Caută spațiu..." class="mb-2" />
         <va-select v-model="form.priority" :options="prioOptions" text-by="label" value-by="value" label="Prioritate" class="mb-2" />
         <va-textarea v-model="form.description" label="Descrierea problemei" :min-rows="3" class="mb-2" />
       </div>
@@ -75,7 +75,14 @@ export default {
     const openCreate = async () => {
       Object.keys(form).forEach(k => delete form[k]); form.priority = 'MEDIUM';
       const props = (await api.get('/properties')).data;
-      propertyOpts.value = props.map(p => ({ value: p.id, label: `${p.title} — ${p.address}` }));
+      propertyOpts.value = props.map(p => {
+        const cleanAddr = p.address
+          .replace(/,\s*Bucure[sș]ti/gi, '')
+          .replace(/,\s*Rom[aâ]nia/gi, '')
+          .replace(/,\s*Sector\s*\d/gi, '')
+          .trim();
+        return { value: p.id, label: `🏢 ${p.title}  —  📍 ${cleanAddr}` };
+      });
       showModal.value = true;
     };
     const save = async () => {
@@ -97,4 +104,4 @@ export default {
 };
 </script>
 
-<style scoped>.modal-form { min-width: 420px; }</style>
+<style scoped>.modal-form { min-width: 550px; max-width: 100%; }</style>
