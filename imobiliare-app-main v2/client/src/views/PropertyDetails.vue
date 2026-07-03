@@ -106,6 +106,12 @@
                       Cerere ofertă
                     </va-button>
                   </div>
+                  <div class="mt-4" v-else-if="isMyRentedSpace">
+                    <va-alert color="success" outline class="text-center w-full">
+                      <va-icon name="check_circle" class="mr-1" />
+                      Spațiu închiriat de tine
+                    </va-alert>
+                  </div>
                   <div class="mt-4" v-else>
                     <va-alert color="info" outline class="text-center w-full">
                       Acest spațiu nu mai este disponibil pentru închiriere.
@@ -141,6 +147,7 @@ export default {
     const property = ref(null);
     const loading = ref(true);
     const currentImgIdx = ref(0);
+    const myRentedPropertyIds = ref([]);
 
     const nextImg = () => {
       if (!property.value?.images?.length) return;
@@ -159,6 +166,14 @@ export default {
         const id = route.params.id;
         const res = await api.get(`/properties/${id}`);
         property.value = res.data;
+        if (store.getters.isLoggedIn && store.getters.userRole === 'client') {
+          try {
+            const mineRes = await api.get('/contracts/mine');
+            myRentedPropertyIds.value = mineRes.data.map(c => Number(c.property_id));
+          } catch (e) {
+            console.error(e);
+          }
+        }
       } catch (err) {
         console.error(err);
         notify({ message: 'Nu am putut încărca anunțul', color: 'danger' });
@@ -189,9 +204,32 @@ export default {
         }
     };
 
+    const isMyRentedSpace = computed(() => {
+      if (!store.getters.isLoggedIn || !property.value) return false;
+      const user = store.getters.currentUser;
+      if (!user) return false;
+
+      if (myRentedPropertyIds.value.includes(Number(property.value.id))) {
+        return true;
+      }
+
+      if (property.value.tenant) {
+        if (property.value.tenant.tenant_email && user.email && property.value.tenant.tenant_email.toLowerCase() === user.email.toLowerCase()) {
+          return true;
+        }
+        if (property.value.tenant.tenant_user_id && Number(property.value.tenant.tenant_user_id) === Number(user.id)) {
+          return true;
+        }
+        if (property.value.tenant.user_id && Number(property.value.tenant.user_id) === Number(user.id)) {
+          return true;
+        }
+      }
+      return false;
+    });
+
     onMounted(fetchProperty);
 
-    return { property, loading, getImageUrl, requestOffer, isAdmin, currentImgIdx, nextImg, prevImg };
+    return { property, loading, getImageUrl, requestOffer, isAdmin, currentImgIdx, nextImg, prevImg, isMyRentedSpace };
   }
 }
 </script>

@@ -91,6 +91,7 @@ router.get("/:id", async (req, res) => {
           "contracts.deposit_eur",
           "contracts.status as contract_status",
           "tenants.id as tenant_id",
+          "tenants.user_id as tenant_user_id",
           "tenants.company_name as tenant_name",
           "tenants.cui",
           "tenants.reg_no",
@@ -116,6 +117,7 @@ router.get("/:id", async (req, res) => {
             "contracts.deposit_eur",
             "contracts.status as contract_status",
             "tenants.id as tenant_id",
+            "tenants.user_id as tenant_user_id",
             "tenants.company_name as tenant_name",
             "tenants.cui",
             "tenants.reg_no",
@@ -136,6 +138,7 @@ router.get("/:id", async (req, res) => {
           .join("users", "offers.user_id", "users.id")
           .leftJoin("tenants", "users.id", "tenants.user_id")
           .select(
+            "users.id as tenant_user_id",
             "users.full_name as tenant_name",
             "users.email as tenant_email",
             "users.phone as tenant_phone",
