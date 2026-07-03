@@ -13,6 +13,7 @@
 
 <script>
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
+import { useRouter } from "vue-router";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
@@ -37,6 +38,7 @@ export default {
   },
   emits: ["select-property"],
   setup(props, { emit }) {
+    const router = useRouter();
     const mapDiv = ref(null);
     let map = null;
     let clusterGroup = null;
@@ -68,6 +70,9 @@ export default {
     const handlePopupClick = (e) => {
       if (e.detail) {
         emit("select-property", e.detail);
+        if (router && router.currentRoute.value.path !== `/property/${e.detail}`) {
+          router.push(`/property/${e.detail}`).catch(() => {});
+        }
       }
     };
 
@@ -171,7 +176,7 @@ export default {
                   <span class="popup-price">${formatPrice(p.price)} €</span>
                   <span class="popup-area">${p.area} m²</span>
                 </div>
-                <button class="popup-action-btn" onclick="window.dispatchEvent(new CustomEvent('map-select-prop', { detail: ${p.id} }))">
+                <button class="popup-action-btn" onclick="window.dispatchEvent(new CustomEvent('map-select-prop', { detail: '${p.id}' }))">
                   Detalii →
                 </button>
               </div>
@@ -184,10 +189,6 @@ export default {
           className: "sleek-map-popup",
           maxWidth: 280,
           minWidth: 260,
-        });
-
-        marker.on("click", () => {
-          emit("select-property", p.id);
         });
 
         markersMap.set(p.id, marker);

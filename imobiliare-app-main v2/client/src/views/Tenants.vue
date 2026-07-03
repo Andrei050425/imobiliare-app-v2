@@ -2,7 +2,7 @@
   <div>
     <div class="page-title">Chiriași</div>
     <div class="toolbar">
-      <va-input v-model="search" placeholder="Caută după denumire sau CUI..." @keyup.enter="load">
+      <va-input v-model="search" placeholder="Caută după denumire sau CUI..." clearable @clear="load" @update:modelValue="val => { if (!val) load(); }" @keyup.enter="load">
         <template #prependInner><va-icon name="search" /></template>
       </va-input>
       <va-select v-model="statusFilter" :options="statusOptions" text-by="label" value-by="value" placeholder="Toate stările" clearable @update:modelValue="load" />

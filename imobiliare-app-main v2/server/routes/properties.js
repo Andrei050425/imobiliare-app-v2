@@ -76,6 +76,84 @@ router.get("/:id", async (req, res) => {
       .select("id", "path");
     property.images = images;
 
+    // Dacă spațiul este ocupat sau rezervat, căutăm informațiile despre chiriaș și contract
+    if (property.status === "OCCUPIED" || property.status === "RESERVED") {
+      const contractStatus = property.status === "OCCUPIED" ? "ACTIVE" : "DRAFT";
+      let contract = await knex("contracts")
+        .where({ "contracts.property_id": property.id, "contracts.status": contractStatus })
+        .join("tenants", "contracts.tenant_id", "tenants.id")
+        .select(
+          "contracts.id as contract_id",
+          "contracts.contract_number",
+          "contracts.start_date",
+          "contracts.end_date",
+          "contracts.monthly_rent_eur",
+          "contracts.deposit_eur",
+          "contracts.status as contract_status",
+          "tenants.id as tenant_id",
+          "tenants.company_name as tenant_name",
+          "tenants.cui",
+          "tenants.reg_no",
+          "tenants.email as tenant_email",
+          "tenants.phone as tenant_phone",
+          "tenants.legal_rep_name",
+          "tenants.address as tenant_address"
+        )
+        .orderBy("contracts.created_at", "desc")
+        .first();
+
+      // Dacă nu am găsit contract cu status exact, luăm cel mai recent contract (backup)
+      if (!contract) {
+        contract = await knex("contracts")
+          .where({ "contracts.property_id": property.id })
+          .join("tenants", "contracts.tenant_id", "tenants.id")
+          .select(
+            "contracts.id as contract_id",
+            "contracts.contract_number",
+            "contracts.start_date",
+            "contracts.end_date",
+            "contracts.monthly_rent_eur",
+            "contracts.deposit_eur",
+            "contracts.status as contract_status",
+            "tenants.id as tenant_id",
+            "tenants.company_name as tenant_name",
+            "tenants.cui",
+            "tenants.reg_no",
+            "tenants.email as tenant_email",
+            "tenants.phone as tenant_phone",
+            "tenants.legal_rep_name",
+            "tenants.address as tenant_address"
+          )
+          .orderBy("contracts.created_at", "desc")
+          .first();
+      }
+
+      // Dacă tot nu am găsit contract, căutăm în oferte
+      if (!contract) {
+        const offer = await knex("offers")
+          .where({ "offers.property_id": property.id })
+          .whereIn("offers.status", ["ACCEPTED", "SENT", "PENDING"])
+          .join("users", "offers.user_id", "users.id")
+          .leftJoin("tenants", "users.id", "tenants.user_id")
+          .select(
+            "users.full_name as tenant_name",
+            "users.email as tenant_email",
+            "users.phone as tenant_phone",
+            "tenants.cui",
+            "tenants.reg_no",
+            "tenants.legal_rep_name",
+            "tenants.address as tenant_address"
+          )
+          .orderBy("offers.created_at", "desc")
+          .first();
+        if (offer) {
+          property.tenant = offer;
+        }
+      } else {
+        property.tenant = contract;
+      }
+    }
+
     res.json(property);
   } catch (err) {
     res.status(500).json({ message: "Server error" });

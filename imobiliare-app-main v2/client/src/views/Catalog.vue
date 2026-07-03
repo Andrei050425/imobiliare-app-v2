@@ -1,19 +1,19 @@
 <template>
   <div class="catalog-split-page">
-    <div class="hero mb-4">
+    <div class="hero mb-3">
       <h1 class="page-title">Spații comerciale și birouri în București</h1>
       <p class="page-subtitle">Găsește spațiul ideal pentru afacerea ta pe harta interactivă SANTA</p>
     </div>
 
-    <!-- Bara de filtre sus -->
-    <va-card class="filter-bar mb-4">
-      <va-card-content>
+    <!-- Bara de filtre sus (fixă) -->
+    <va-card class="filter-bar mb-3">
+      <va-card-content class="py-2 px-3">
         <div class="toolbar d-flex flex-wrap gap-3 align-center">
-          <va-input v-model="filters.q" placeholder="Caută după denumire, stradă, zonă..." class="grow">
+          <va-input v-model="filters.q" placeholder="Caută după denumire, stradă, zonă..." clearable @clear="fetchProperties" @update:modelValue="val => { if (!val) fetchProperties(); }" @keyup.enter="fetchProperties" class="grow">
             <template #prependInner><va-icon name="search" color="secondary" /></template>
           </va-input>
-          <va-select v-model="filters.sector" :options="sectors" placeholder="Toate sectoarele" clearable style="min-width: 160px;" />
-          <va-select v-model="filters.category_id" :options="categories" text-by="name" value-by="id" placeholder="Toate tipurile" clearable style="min-width: 180px;" />
+          <va-select v-model="filters.sector" :options="sectors" placeholder="Toate sectoarele" clearable style="min-width: 150px;" />
+          <va-select v-model="filters.category_id" :options="categories" text-by="name" value-by="id" placeholder="Toate tipurile" clearable style="min-width: 170px;" />
           <va-button color="primary" @click="fetchProperties">
             <va-icon name="filter_list" class="mr-1" /> Caută
           </va-button>
@@ -26,11 +26,11 @@
       <p class="mt-2 text-secondary">Se încarcă spațiile și harta...</p>
     </div>
 
-    <!-- Split-Screen Container -->
+    <!-- Split-Screen Container (Fix pe înălțimea ecranului) -->
     <div v-else class="split-layout">
-      <!-- Stânga: Lista de Proprietăți -->
+      <!-- Stânga: Lista de Proprietăți (Singura zonă cu scroll vertical!) -->
       <div class="list-column">
-        <div class="d-flex justify-space-between align-center mb-3">
+        <div class="d-flex justify-space-between align-center mb-3 pr-2">
           <span class="result-count"><strong>{{ properties.length }}</strong> proprietăți găsite</span>
         </div>
 
@@ -40,7 +40,7 @@
           <va-button preset="secondary" size="small" class="mt-2" @click="resetFilters">Resetează filtrele</va-button>
         </div>
 
-        <div v-else class="property-list">
+        <div v-else class="property-list pr-2">
           <va-card 
             v-for="p in properties" 
             :key="p.id" 
@@ -78,9 +78,9 @@
         </div>
       </div>
 
-      <!-- Dreapta: Harta Interactivă (Sticky) -->
+      <!-- Dreapta: Harta Interactivă (Complet Fixă, fără scroll) -->
       <div class="map-column">
-        <div class="sticky-map-wrapper">
+        <div class="map-wrapper">
           <PropertyMap 
             :properties="properties" 
             :hoveredId="hoveredId" 
@@ -186,63 +186,102 @@ export default {
 </script>
 
 <style scoped>
+/* --- PAGINĂ FIXĂ PE ÎNĂLȚIMEA ECRANULUI --- */
 .catalog-split-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 112px); /* 100vh minus navbar (64px) minus padding AppLayout (48px) */
   max-width: 1600px;
   margin: 0 auto;
-  padding: 0 16px;
   font-family: 'Outfit', sans-serif;
+  overflow: hidden; /* Fără scroll pe pagina generală */
 }
 
 .hero {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
 }
 .page-title {
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: #1e293b;
   margin: 0;
 }
 .page-subtitle {
   color: #64748b;
-  margin: 4px 0 0;
-  font-size: 1rem;
+  margin: 2px 0 0;
+  font-size: 0.95rem;
 }
 
 .filter-bar {
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 12px rgba(0,0,0,0.03);
   border-radius: 12px;
+  flex-shrink: 0;
 }
 .grow {
   flex: 1;
-  min-width: 220px;
+  min-width: 200px;
 }
 
 /* --- SPLIT LAYOUT (50% Listă stânga, 50% Hartă dreapta) --- */
 .split-layout {
   display: flex;
-  gap: 24px;
-  align-items: flex-start;
+  gap: 20px;
+  flex: 1;
+  min-height: 0; /* Critic pentru flexbox shrink și scroll intern */
+  overflow: hidden;
 }
 
+/* Coloana Stânga: LISTA DE PROPRIETĂȚI (Singura cu scroll!) */
 .list-column {
   flex: 1;
   width: 50%;
   max-width: 50%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
+/* Custom Scrollbar pentru lista din stânga */
+.list-column::-webkit-scrollbar {
+  width: 6px;
+}
+.list-column::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+.list-column::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.list-column::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Coloana Dreapta: HARTA (Complet Fixă!) */
 .map-column {
   flex: 1;
   width: 50%;
   max-width: 50%;
+  height: 100%;
+  overflow: hidden;
 }
 
-.sticky-map-wrapper {
-  position: sticky;
-  top: 80px;
-  height: calc(100vh - 120px);
-  min-height: 600px;
+.map-wrapper {
   width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+}
+
+.map-wrapper :deep(.property-map-container) {
+  height: 100% !important;
+  min-height: 100% !important;
 }
 
 /* --- CARD PROPRIETATE IN LISTA --- */
@@ -259,24 +298,25 @@ export default {
   cursor: pointer;
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  flex-shrink: 0;
 }
 
 .property-card:hover,
 .property-card.hovered-card {
-  transform: translateY(-4px) scale(1.01);
-  box-shadow: 0 12px 24px -6px rgba(16, 185, 129, 0.15);
+  transform: translateY(-3px) scale(1.008);
+  box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.15);
   border-color: #10b981;
 }
 
 .card-horizontal {
   display: flex;
-  height: 180px;
+  height: 170px;
 }
 
 .card-image-box {
   position: relative;
-  width: 220px;
-  min-width: 220px;
+  width: 200px;
+  min-width: 200px;
   height: 100%;
   background: #f1f5f9;
 }
@@ -296,7 +336,7 @@ export default {
 
 .card-details-box {
   flex: 1;
-  padding: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -304,7 +344,7 @@ export default {
 }
 
 .property-title {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: #1e293b;
   margin: 0;
@@ -314,7 +354,7 @@ export default {
 }
 
 .property-price {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: #10b981;
   white-space: nowrap;
@@ -323,7 +363,7 @@ export default {
 
 .property-address {
   font-size: 0.85rem;
-  margin: 6px 0 12px 0;
+  margin: 4px 0 10px 0;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -335,11 +375,11 @@ export default {
 .property-meta {
   display: flex;
   align-items: center;
-  gap: 16px;
-  font-size: 0.9rem;
+  gap: 14px;
+  font-size: 0.88rem;
   color: #475569;
   border-top: 1px solid #f1f5f9;
-  padding-top: 12px;
+  padding-top: 10px;
 }
 
 .meta-item {
@@ -352,20 +392,26 @@ export default {
   font-weight: 600;
 }
 
-/* Responsive: pe ecrane mai mici, stivuim pe verticală */
+/* Responsive: pe ecrane mai mici, stivuim pe verticală și lăsăm scroll normal */
 @media (max-width: 1024px) {
+  .catalog-split-page {
+    height: auto;
+    overflow: visible;
+  }
   .split-layout {
     flex-direction: column;
+    height: auto;
+    overflow: visible;
   }
   .list-column, .map-column {
     width: 100%;
     max-width: 100%;
+    height: auto;
+    overflow: visible;
   }
-  .sticky-map-wrapper {
-    position: relative;
-    top: 0;
-    height: 500px;
-    margin-top: 24px;
+  .map-wrapper {
+    height: 450px;
+    margin-top: 20px;
   }
   .card-horizontal {
     height: auto;
@@ -373,7 +419,7 @@ export default {
   }
   .card-image-box {
     width: 100%;
-    height: 200px;
+    height: 180px;
   }
 }
 </style>
