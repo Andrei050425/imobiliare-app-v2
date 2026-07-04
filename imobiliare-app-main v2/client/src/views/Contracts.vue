@@ -128,7 +128,6 @@ export default {
       { key: 'actions', label: 'Acțiuni' },
     ];
     const statusOptions = Object.entries(CONTRACT_STATUS)
-      .filter(([value]) => value !== 'DRAFT')
       .map(([value, v]) => ({ value, label: v.label }));
     const fmtDate = (d) => {
       if (!d) return '';

@@ -20,11 +20,21 @@
             <va-button preset="plain" icon="visibility" title="Vezi" @click="$router.push(`/app/invoices/${row.source.id}`)" />
             <va-button preset="plain" color="info" icon="picture_as_pdf" title="Descarcă PDF" @click="downloadPdf(row.source.id, row.source.invoice_number)" />
             <va-button v-if="['ISSUED','OVERDUE'].includes(row.source.status)" preset="plain" color="success" icon="paid" title="Marchează plătită" @click="pay(row.source.id)" />
-            <va-button v-if="row.source.status !== 'CANCELLED'" preset="plain" color="danger" icon="block" title="Anulează" @click="cancel(row.source.id)" />
+            <va-button v-if="row.source.status !== 'CANCELLED'" preset="plain" color="danger" icon="block" title="Anulează" @click="openCancelModal(row.source.id)" />
           </template>
         </va-data-table>
       </va-card-content>
     </va-card>
+
+    <va-modal v-model="showCancelModal" title="Confirmare Anulare Factură" hide-default-actions>
+      <div class="mb-3" style="font-size: 0.95rem; color: var(--va-text-primary);">
+        Ești sigur că dorești să anulezi această factură? Această acțiune va schimba starea în <b>Anulată</b> și nu va mai putea fi încasată.
+      </div>
+      <template #footer>
+        <va-button preset="secondary" @click="showCancelModal = false">Înapoi</va-button>
+        <va-button class="ml-2" color="danger" @click="confirmCancel">Confirmă Anularea</va-button>
+      </template>
+    </va-modal>
   </div>
 </template>
 
@@ -42,6 +52,8 @@ export default {
     const loading = ref(false);
     const generating = ref(false);
     const statusFilter = ref(null);
+    const showCancelModal = ref(false);
+    const invoiceToCancel = ref(null);
     const cols = [
       { key: 'invoice_number', label: 'Nr. factură' },
       { key: 'tenant_name', label: 'Chiriaș' },
@@ -76,10 +88,15 @@ export default {
       try { await api.patch(`/invoices/${id}/pay`); init({ message: 'Factură achitată.', color: 'success' }); load(); }
       catch (e) { init({ message: 'Eroare.', color: 'danger' }); }
     };
-    const cancel = async (id) => {
-      if (!confirm('Anulezi factura?')) return;
-      try { await api.patch(`/invoices/${id}/cancel`); init({ message: 'Factură anulată.', color: 'success' }); load(); }
-      catch (e) { init({ message: 'Eroare.', color: 'danger' }); }
+    const openCancelModal = (id) => {
+      invoiceToCancel.value = id;
+      showCancelModal.value = true;
+    };
+    const confirmCancel = async () => {
+      if (!invoiceToCancel.value) return;
+      showCancelModal.value = false;
+      try { await api.patch(`/invoices/${invoiceToCancel.value}/cancel`); init({ message: 'Factură anulată.', color: 'success' }); load(); }
+      catch (e) { init({ message: 'Eroare la anulare.', color: 'danger' }); }
     };
     const downloadPdf = async (id, invNumber) => {
       try {
@@ -98,7 +115,7 @@ export default {
       }
     };
     onMounted(load);
-    return { invoices, loading, generating, statusFilter, statusOptions, cols, ST: INVOICE_STATUS, fmt, fmtDate, load, generate, pay, cancel, downloadPdf };
+    return { invoices, loading, generating, statusFilter, statusOptions, cols, ST: INVOICE_STATUS, fmt, fmtDate, load, generate, pay, openCancelModal, confirmCancel, downloadPdf, showCancelModal };
   }
 };
 </script>

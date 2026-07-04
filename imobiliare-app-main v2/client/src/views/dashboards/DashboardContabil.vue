@@ -23,7 +23,7 @@
         </va-card-content>
       </va-card>
 
-      <va-modal v-model="showMonthlyModal" title="Istoric încasări și facturări pe lună" hide-default-cancel ok-text="Închide" size="large">
+      <va-modal v-model="showMonthlyModal" title="Istoric încasări și facturări pe lună" hide-default-actions size="large">
         <div class="mb-3" style="color: var(--va-secondary); font-size: 0.9rem;">
           Situația detaliată a sumelor facturate și încasate pentru fiecare lună înregistrată în sistem:
         </div>
@@ -40,6 +40,9 @@
             </va-badge>
           </template>
         </va-data-table>
+        <template #footer>
+          <va-button @click="showMonthlyModal = false">Închide</va-button>
+        </template>
       </va-modal>
     </div>
   </div>
