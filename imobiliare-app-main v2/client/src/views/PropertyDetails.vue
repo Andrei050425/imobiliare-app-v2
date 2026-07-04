@@ -102,8 +102,17 @@
                     </va-button>
                   </div>
                   <div class="mt-4" v-else-if="property.status === 'FREE'">
-                    <va-button block color="primary" @click="requestOffer">
-                      Cerere ofertă
+                    <div v-if="myActiveOffer" class="text-center">
+                      <va-alert color="warning" outline class="text-center w-full mb-3 text-sm">
+                        <va-icon name="info" class="mr-1" />
+                        Ai deja o ofertă trimisă pentru acest spațiu. Odată ce a fost trimisă oferta nu mai poți trimite alta până nu o anulezi pe cea transmisă înainte.
+                      </va-alert>
+                      <va-button block color="warning" preset="secondary" icon="visibility" @click="$router.push('/app/my-offers')">
+                        Vezi / Anulează în „Ofertele mele”
+                      </va-button>
+                    </div>
+                    <va-button v-else block color="primary" icon="send" @click="openOfferModal">
+                      Trimite ofertă
                     </va-button>
                   </div>
                   <div class="mt-4" v-else-if="isMyRentedSpace">
@@ -124,11 +133,73 @@
         </va-card-content>
       </va-card>
     </div>
+
+    <!-- MODAL TRIMITE OFERTĂ -->
+    <va-modal v-model="showOfferModal" title="Trimite Ofertă de Închiriere" hide-default-actions>
+      <div v-if="property" class="modal-form py-2" style="min-width: 320px; max-width: 520px;">
+        <div class="mb-3 p-3 rounded" style="background-color: var(--va-background-element); border-left: 4px solid var(--va-primary);">
+          <div class="text--bold">{{ property.title }}</div>
+          <div class="text--secondary text-sm">Preț catalog: <strong>{{ property.price }} EUR / lună</strong></div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="flex xs12 sm6 pr-sm-2 mb-2 sm-mb-0">
+            <va-input 
+              v-model="offerForm.start_date" 
+              type="date" 
+              label="Data început contract" 
+              bordered
+            />
+          </div>
+          <div class="flex xs12 sm6 pl-sm-2">
+            <va-input 
+              v-model="offerForm.end_date" 
+              type="date" 
+              label="Data sfârșit (alegi câți ani dorești)" 
+              bordered
+            />
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <va-input 
+            v-model.number="offerForm.price" 
+            type="number" 
+            label="Contraofertă Chirie Lunară (EUR)" 
+            bordered
+          >
+            <template #prependInner>
+              <va-icon name="euro" size="small" color="secondary" />
+            </template>
+          </va-input>
+        </div>
+
+        <div class="mb-4">
+          <va-input 
+            v-model="offerForm.details" 
+            type="textarea" 
+            label="Mesaj / Observații suplimentare (opțional)" 
+            :min-rows="3" 
+            bordered 
+            placeholder="Menționează orice cerință specială sau detaliu despre oferta ta..."
+          />
+        </div>
+
+        <div class="d-flex justify-end gap-2 mt-4">
+          <va-button preset="secondary" color="secondary" @click="showOfferModal = false">
+            Anulează
+          </va-button>
+          <va-button color="primary" icon="send" :loading="sendingOffer" @click="submitOffer">
+            Trimite Oferta
+          </va-button>
+        </div>
+      </div>
+    </va-modal>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { useToast } from 'vuestic-ui';
@@ -148,6 +219,7 @@ export default {
     const loading = ref(true);
     const currentImgIdx = ref(0);
     const myRentedPropertyIds = ref([]);
+    const myActiveOffer = ref(null);
 
     const nextImg = () => {
       if (!property.value?.images?.length) return;
@@ -166,12 +238,20 @@ export default {
         const id = route.params.id;
         const res = await api.get(`/properties/${id}`);
         property.value = res.data;
-        if (store.getters.isLoggedIn && store.getters.userRole === 'client') {
+        if (store.getters.isLoggedIn) {
           try {
-            const mineRes = await api.get('/contracts/mine');
-            myRentedPropertyIds.value = mineRes.data.map(c => Number(c.property_id));
+            const offersRes = await api.get('/offers/mine');
+            myActiveOffer.value = offersRes.data.find(o => Number(o.property_id) === Number(property.value.id) && ['PENDING', 'SENT'].includes(o.status));
           } catch (e) {
             console.error(e);
+          }
+          if (store.getters.userRole === 'client') {
+            try {
+              const mineRes = await api.get('/contracts/mine');
+              myRentedPropertyIds.value = mineRes.data.map(c => Number(c.property_id));
+            } catch (e) {
+              console.error(e);
+            }
           }
         }
       } catch (err) {
@@ -188,20 +268,80 @@ export default {
       return `http://localhost:3000/${cleanPath}`; 
     };
 
-    const requestOffer = async () => {
-        if (!store.getters.isLoggedIn) {
-          notify({ message: 'Trebuie să te loghezi pentru a cere o ofertă.', color: 'warning' });
-          router.push('/login');
-          return;
-        }
+    const showOfferModal = ref(false);
+    const sendingOffer = ref(false);
+    const offerForm = ref({
+      start_date: '',
+      end_date: '',
+      price: 0,
+      details: ''
+    });
 
-        try {
-          await api.post('/offers', { property_id: route.params.id });
-          notify({ message: 'Cererea ta de ofertă a fost trimisă cu succes!', color: 'success' });
-        } catch (err) {
-          const msg = err.response?.data?.error || err.response?.data?.message || err.message;
-          notify({ message: `A apărut o eroare: ${msg}`, color: 'danger' });
+    watch(() => offerForm.value.start_date, (newDate) => {
+      if (newDate) {
+        const dateObj = new Date(newDate);
+        if (!isNaN(dateObj.getTime())) {
+          dateObj.setFullYear(dateObj.getFullYear() + 1);
+          offerForm.value.end_date = dateObj.toISOString().split('T')[0];
         }
+      }
+    });
+
+    const openOfferModal = () => {
+      if (!store.getters.isLoggedIn) {
+        notify({ message: 'Trebuie să te loghezi pentru a trimite o ofertă.', color: 'warning' });
+        router.push('/login');
+        return;
+      }
+      
+      const today = new Date();
+      const startDateStr = today.toISOString().split('T')[0];
+      const nextYear = new Date(today);
+      nextYear.setFullYear(nextYear.getFullYear() + 1);
+      const endDateStr = nextYear.toISOString().split('T')[0];
+
+      offerForm.value = {
+        start_date: startDateStr,
+        end_date: endDateStr,
+        price: property.value?.price || 0,
+        details: ''
+      };
+      showOfferModal.value = true;
+    };
+
+    const submitOffer = async () => {
+      if (!offerForm.value.start_date || !offerForm.value.end_date) {
+        notify({ message: 'Te rugăm să selectezi perioada de valabilitate a contractului.', color: 'warning' });
+        return;
+      }
+      if (!offerForm.value.price || offerForm.value.price <= 0) {
+        notify({ message: 'Te rugăm să introduci o chirie lunară validă.', color: 'warning' });
+        return;
+      }
+
+      sendingOffer.value = true;
+      try {
+        const detailsObj = {
+          start_date: offerForm.value.start_date,
+          end_date: offerForm.value.end_date,
+          message: offerForm.value.details
+        };
+
+        await api.post('/offers', { 
+          property_id: route.params.id,
+          offer_price: Number(offerForm.value.price),
+          offer_details: JSON.stringify(detailsObj)
+        });
+        
+        notify({ message: 'Oferta ta a fost trimisă cu succes către administrator!', color: 'success' });
+        showOfferModal.value = false;
+        fetchProperty();
+      } catch (err) {
+        const msg = err.response?.data?.error || err.response?.data?.message || err.message;
+        notify({ message: `A apărut o eroare: ${msg}`, color: 'danger' });
+      } finally {
+        sendingOffer.value = false;
+      }
     };
 
     const isMyRentedSpace = computed(() => {
@@ -229,7 +369,10 @@ export default {
 
     onMounted(fetchProperty);
 
-    return { property, loading, getImageUrl, requestOffer, isAdmin, currentImgIdx, nextImg, prevImg, isMyRentedSpace };
+    return { 
+      property, loading, getImageUrl, isAdmin, currentImgIdx, nextImg, prevImg, isMyRentedSpace,
+      showOfferModal, sendingOffer, offerForm, openOfferModal, submitOffer, myActiveOffer
+    };
   }
 }
 </script>

@@ -4,7 +4,7 @@
     
     <va-tabs v-model="activeTab" class="mb-4">
       <template #tabs>
-        <va-tab name="active">Cereri active</va-tab>
+        <va-tab name="active">Oferte primite</va-tab>
         <va-tab name="sent">Oferte trimise</va-tab>
         <va-tab name="rejected">Cereri respinse</va-tab>
       </template>
@@ -28,11 +28,18 @@
           </template>
           <template #cell(actions)="{ row }">
             <va-button 
+              preset="plain"
+              color="info"
+              icon="visibility" 
+              title="Vizualizare ofertă / detalii"
+              @click="openDetailsModal(row.source)"
+            />
+            <va-button 
               v-if="row.source.status === 'PENDING'" 
               preset="plain"
               color="primary"
               icon="send" 
-              title="Trimite Ofertă"
+              title="Trimite răspuns / ofertă"
               @click="openModal(row.source)"
             />
             <va-button 
@@ -42,14 +49,6 @@
               icon="cancel" 
               title="Anulează cererea"
               @click="cancelOffer(row.source.id)"
-            />
-            <va-button 
-              v-if="row.source.status !== 'PENDING'" 
-              preset="plain"
-              color="info"
-              icon="visibility" 
-              title="Vizualizare detalii"
-              @click="openDetailsModal(row.source)"
             />
           </template>
         </va-data-table>
@@ -90,17 +89,20 @@
           <div class="flex xs6"><va-input :modelValue="selectedDetails.start_date || '-'" label="Data început" class="mb-2" readonly /></div>
           <div class="flex xs6"><va-input :modelValue="selectedDetails.end_date || '-'" label="Data sfârșit" class="mb-2" readonly /></div>
         </div>
-        <va-input :modelValue="selectedDetails.message || '-'" label="Mesaj / Detalii" type="textarea" class="mb-2" readonly />
+        <va-input :modelValue="selectedDetails.message || selectedDetails.details || (typeof selectedDetails.offer_details === 'string' && !selectedDetails.offer_details.startsWith('{') ? selectedDetails.offer_details : '-')" label="Mesaj / Detalii" type="textarea" class="mb-2" readonly />
         
         <div class="mt-3">
           <span style="color: var(--va-primary); font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">Status curent:</span>
           <va-badge class="ml-2" 
-            :color="selectedDetails.status === 'REJECTED' ? 'danger' : (selectedDetails.status === 'ACCEPTED' ? 'success' : 'info')" 
-            :text="selectedDetails.status === 'REJECTED' ? 'Refuzată' : (selectedDetails.status === 'ACCEPTED' ? 'Acceptată' : 'Trimisă')" 
+            :color="selectedDetails.status === 'PENDING' ? 'warning' : (selectedDetails.status === 'REJECTED' ? 'danger' : (selectedDetails.status === 'ACCEPTED' ? 'success' : 'info'))" 
+            :text="selectedDetails.status === 'PENDING' ? 'Ofertă primită (în așteptare)' : (selectedDetails.status === 'REJECTED' ? 'Refuzată' : (selectedDetails.status === 'ACCEPTED' ? 'Acceptată' : 'Trimisă'))" 
           />
         </div>
       </div>
       <template #footer>
+        <va-button v-if="selectedDetails && selectedDetails.status === 'PENDING'" color="primary" icon="send" class="mr-2" @click="showDetailsModal = false; openModal(selectedDetails)">
+          Răspunde / Trimite contract
+        </va-button>
         <va-button @click="showDetailsModal = false">Închide</va-button>
       </template>
     </va-modal>
@@ -176,14 +178,18 @@ export default {
 
     const openModal = (offer) => {
       selectedOffer.value = offer;
-      const price = offer.property_price || 0;
+      let parsed = {};
+      if (offer.offer_details) {
+        try { parsed = JSON.parse(offer.offer_details); } catch(e) {}
+      }
+      const price = offer.offer_price || offer.property_price || 0;
       offerData.value = { 
-        start_date: '',
-        end_date: '',
+        start_date: parsed.start_date || '',
+        end_date: parsed.end_date || '',
         price: price, 
-        deposit_eur: price * 2,
-        utilities_ron: 0,
-        details: '' 
+        deposit_eur: parsed.deposit_eur || price * 2,
+        utilities_ron: parsed.utilities_ron || 0,
+        details: parsed.message || parsed.details || '' 
       };
       showModal.value = true;
     };

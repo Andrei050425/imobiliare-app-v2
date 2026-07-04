@@ -96,6 +96,15 @@ router.post("/", auth, requireRole("admin"), async (req, res) => {
       return res.status(400).json({ message: "Spațiul nu este disponibil." });
     }
 
+    // Verificăm să nu existe deja un contract DRAFT sau ACTIVE pe acest spațiu
+    const existingContract = await knex("contracts")
+      .where({ property_id })
+      .whereIn("status", ["DRAFT", "ACTIVE"])
+      .first();
+    if (existingContract) {
+      return res.status(400).json({ message: "Există deja un contract activ sau în curs de validare (ciornă) pentru acest spațiu. Un utilizator sau chiriaș nu poate avea 2 contracte diferite pe același spațiu." });
+    }
+
     const year = new Date(start_date).getFullYear();
     const contractNumber = await nextContractNumber(year);
 

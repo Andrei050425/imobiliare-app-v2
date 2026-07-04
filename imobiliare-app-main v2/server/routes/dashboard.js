@@ -139,6 +139,13 @@ router.get("/client", auth, requireRole("client"), async (req, res) => {
       .count("id as c")
       .first();
 
+    const unpaidInvoicesCount = await knex("invoices")
+      .join("contracts", "invoices.contract_id", "contracts.id")
+      .where("contracts.tenant_id", tenant.id)
+      .whereIn("invoices.status", ["ISSUED", "OVERDUE"])
+      .count("invoices.id as c")
+      .first();
+
     const nextInvoice = await knex("invoices")
       .join("contracts", "invoices.contract_id", "contracts.id")
       .where("contracts.tenant_id", tenant.id)
@@ -163,6 +170,7 @@ router.get("/client", auth, requireRole("client"), async (req, res) => {
       activeContracts: Number(activeContracts.c),
       outstanding: Number(outstanding.s || 0),
       openMaintenance: Number(openMaint.c),
+      unpaidCount: Number(unpaidInvoicesCount.c || 0),
       nextInvoice: nextInvoice || null,
       rentedProperties
     });

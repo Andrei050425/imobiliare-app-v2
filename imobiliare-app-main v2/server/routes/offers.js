@@ -58,17 +58,37 @@ router.get("/mine", auth, async (req, res) => {
 // POST /api/offers - creare cerere nouă de la user
 router.post("/", auth, async (req, res) => {
   try {
-    const { property_id } = req.body;
+    const { property_id, offer_price, offer_details } = req.body;
     if (!property_id) return res.status(400).json({ message: "property_id lipsă." });
+
+    // Verificăm să nu existe deja un contract DRAFT sau ACTIVE pe acest spațiu
+    const existingContract = await knex("contracts")
+      .where({ property_id })
+      .whereIn("status", ["DRAFT", "ACTIVE"])
+      .first();
+    if (existingContract) {
+      return res.status(400).json({ message: "Acest spațiu are deja un contract activ sau în curs de validare și nu se mai pot trimite oferte." });
+    }
+
+    // Verificăm dacă utilizatorul are deja o ofertă activă (PENDING sau SENT) pentru acest spațiu
+    const existingOffer = await knex("offers")
+      .where({ user_id: req.user.id, property_id })
+      .whereIn("status", ["PENDING", "SENT"])
+      .first();
+    if (existingOffer) {
+      return res.status(400).json({ message: "Ai deja o ofertă trimisă pentru acest spațiu! Nu mai poți trimite alta până nu o anulezi pe cea trimisă înainte." });
+    }
 
     const [offer] = await knex("offers")
       .insert({
         user_id: req.user.id,
         property_id,
         status: "PENDING",
+        offer_price: offer_price || 0,
+        offer_details: typeof offer_details === 'object' ? JSON.stringify(offer_details) : (offer_details || ""),
       })
       .returning("*");
-    res.status(201).json({ message: "Cerere trimisă cu succes!", offer });
+    res.status(201).json({ message: "Ofertă trimisă cu succes!", offer });
   } catch (err) {
     console.error("POST /api/offers error:", err);
     res.status(500).json({ message: "Eroare server.", error: err.message });
@@ -81,22 +101,19 @@ router.patch("/:id/send", auth, requireRole("admin"), async (req, res) => {
     const { offer_price, offer_details } = req.body;
     const { id } = req.params;
 
-    const [offer] = await knex("offers")
+    const [updatedOffer] = await knex("offers")
       .where({ id })
       .update({
         status: "SENT",
         offer_price: offer_price || 0,
-        offer_details: offer_details || "",
+        offer_details: typeof offer_details === 'object' ? JSON.stringify(offer_details) : (offer_details || ""),
         updated_at: knex.fn.now(),
       })
       .returning("*");
 
-    if (!offer) {
-      return res.status(404).json({ message: "Cererea nu a fost găsită." });
-    }
-    res.json({ message: "Ofertă trimisă cu succes!", offer });
+    res.json({ message: "Contraofeta a fost trimisă către client!", offer: updatedOffer });
   } catch (err) {
-    console.error(err);
+    console.error("PATCH /api/offers/:id/send error:", err);
     res.status(500).json({ message: "Eroare server." });
   }
 });
@@ -124,6 +141,24 @@ router.patch("/:id/reject", auth, async (req, res) => {
   }
 });
 
+// DELETE /api/offers/:id - anulare ofertă de către client (pentru oferte aflate în așteptare / transmise)
+router.delete("/:id", auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const offer = await knex("offers").where({ id, user_id: req.user.id }).first();
+    if (!offer) return res.status(404).json({ message: "Oferta nu a fost găsită." });
+    if (!["PENDING", "SENT"].includes(offer.status)) {
+      return res.status(400).json({ message: "Poți anula doar ofertele aflate în așteptare sau care nu au fost încă acceptate." });
+    }
+
+    await knex("offers").where({ id }).del();
+    res.json({ message: "Oferta a fost anulată și ștearsă cu succes." });
+  } catch (err) {
+    console.error("DELETE /api/offers/:id error:", err);
+    res.status(500).json({ message: "Eroare la anularea ofertei." });
+  }
+});
+
 // PATCH /api/offers/:id/accept - acceptare ofertă de către client
 router.patch("/:id/accept", auth, async (req, res) => {
   try {
@@ -133,6 +168,15 @@ router.patch("/:id/accept", auth, async (req, res) => {
     const offer = await knex("offers").where({ id, user_id: req.user.id }).first();
     if (!offer) return res.status(404).json({ message: "Cererea nu a fost găsită." });
     if (offer.status !== "SENT") return res.status(400).json({ message: "Oferta nu este validă pentru acceptare." });
+
+    // Verificăm să nu existe deja un contract DRAFT sau ACTIVE pe acest spațiu
+    const existingContract = await knex("contracts")
+      .where({ property_id: offer.property_id })
+      .whereIn("status", ["DRAFT", "ACTIVE"])
+      .first();
+    if (existingContract) {
+      return res.status(400).json({ message: "Acest spațiu are deja un contract validat sau în curs de validare. Un spațiu nu poate avea 2 contracte active." });
+    }
 
     // Preluăm utilizatorul complet
     const user = await knex("users").where({ id: req.user.id }).first();
@@ -214,6 +258,13 @@ router.patch("/:id/accept", auth, async (req, res) => {
         status: "DRAFT",
       })
       .returning("*");
+
+    // Actualizăm starea spațiului la RESERVED după acceptarea ofertei de către client
+    if (offer.property_id) {
+      await knex("properties")
+        .where({ id: offer.property_id })
+        .update({ status: "RESERVED" });
+    }
 
     // Generăm un nou token pentru că s-a schimbat rolul din user în client
     const jwt = require("jsonwebtoken");

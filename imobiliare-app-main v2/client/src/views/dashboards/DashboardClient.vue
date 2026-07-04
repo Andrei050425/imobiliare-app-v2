@@ -11,8 +11,13 @@
           <div class="d-flex justify-space-between align-center">
             <div>
               <div style="font-size:0.9rem;opacity:.9;">De plată</div>
-              <div style="font-size:1.8rem;font-weight:700;">{{ fmt(data.nextInvoice.total_ron) }} RON</div>
-              <div style="font-size:0.85rem;opacity:.9;">Factura {{ data.nextInvoice.invoice_number }} · scadență {{ data.nextInvoice.due_date }}</div>
+              <div style="font-size:1.8rem;font-weight:700;">{{ fmt(data.unpaidCount > 1 ? data.outstanding : data.nextInvoice.total_ron) }} RON</div>
+              <div v-if="data.unpaidCount > 1" style="font-size:0.95rem;font-weight:600;opacity:.95;">
+                Ai de plătit {{ data.unpaidCount }} facturi
+              </div>
+              <div v-else style="font-size:0.85rem;opacity:.9;">
+                Factura {{ data.nextInvoice.invoice_number }} · scadență {{ formatDate(data.nextInvoice.due_date) }}
+              </div>
             </div>
             <va-button preset="secondary" color="#ffffff" @click="$router.push('/app/my-invoices')">Vezi facturile</va-button>
           </div>
@@ -62,6 +67,12 @@ export default {
       if (!data.value.nextInvoice) return 'primary';
       return data.value.nextInvoice.status === 'OVERDUE' ? 'danger' : 'warning';
     });
+    const formatDate = (dateStr) => {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('ro-RO');
+    };
     onMounted(async () => {
       try { data.value = (await api.get('/dashboard/client')).data; }
       catch (e) { console.error(e); }
@@ -72,7 +83,7 @@ export default {
       return `http://localhost:3000/${path.replace(/\\/g, "/")}`;
     };
 
-    return { data, loading, fmt, dueColor, getImageUrl };
+    return { data, loading, fmt, dueColor, formatDate, getImageUrl };
   }
 };
 </script>

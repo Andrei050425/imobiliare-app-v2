@@ -22,13 +22,23 @@
           </template>
           <template #cell(actions)="{ row }">
             <va-button 
-              v-if="row.source.status !== 'PENDING'" 
               size="small" 
               preset="secondary"
               icon="visibility" 
               @click="viewDetails(row.source)"
+              class="mr-2"
             >
-              Vezi mesaj
+              Vezi ofertă
+            </va-button>
+            <va-button 
+              v-if="row.source.status === 'PENDING'"
+              size="small" 
+              color="danger"
+              preset="secondary"
+              icon="delete" 
+              @click="openCancelModal(row.source.id)"
+            >
+              Anulează
             </va-button>
           </template>
         </va-data-table>
@@ -43,7 +53,7 @@
             <div class="mb-2" v-if="parsedDetails(selectedOffer.offer_details).start_date && parsedDetails(selectedOffer.offer_details).end_date">
               <strong>Perioadă contract:</strong> {{ parsedDetails(selectedOffer.offer_details).start_date }} &rarr; {{ parsedDetails(selectedOffer.offer_details).end_date }}
             </div>
-            <div class="mb-2"><strong>Garanție:</strong> {{ parsedDetails(selectedOffer.offer_details).deposit_eur }} EUR</div>
+            <div class="mb-2" v-if="parsedDetails(selectedOffer.offer_details).deposit_eur"><strong>Garanție:</strong> {{ parsedDetails(selectedOffer.offer_details).deposit_eur }} EUR</div>
             <hr class="my-3" v-if="parsedDetails(selectedOffer.offer_details).message" />
             <p style="white-space: pre-line;" v-if="parsedDetails(selectedOffer.offer_details).message">{{ parsedDetails(selectedOffer.offer_details).message }}</p>
           </va-card-content>
@@ -58,8 +68,26 @@
           <va-button color="success" @click="acceptOffer(selectedOffer.id)" class="mr-4">Acceptă</va-button>
           <va-button @click="showModal = false">Închide</va-button>
         </div>
+        <div v-else-if="selectedOffer && selectedOffer.status === 'PENDING'">
+          <va-button color="danger" icon="delete" @click="openCancelModal(selectedOffer.id)" class="mr-2">Anulează ofertă</va-button>
+          <va-button @click="showModal = false">Închide</va-button>
+        </div>
         <div v-else>
           <va-button @click="showModal = false">Închide</va-button>
+        </div>
+      </template>
+    </va-modal>
+
+    <va-modal v-model="showCancelModal" size="small" title="Confirmare Anulare" hide-default-actions>
+      <div class="text-center my-3">
+        <va-icon name="warning" color="danger" size="large" class="mb-3" />
+        <p class="text-base font-bold mb-2">Sigur dorești să anulezi această cerere de ofertă?</p>
+        <p class="text-sm text--secondary">Odată anulată, cererea va fi ștearsă din sistem și vei putea trimite o nouă ofertă pentru acest spațiu.</p>
+      </div>
+      <template #footer>
+        <div class="flex justify-center w-full gap-3 mt-3">
+          <va-button preset="secondary" color="secondary" @click="showCancelModal = false">Înapoi</va-button>
+          <va-button color="danger" icon="delete" :loading="cancelling" @click="confirmCancel">Da, anulează oferta</va-button>
         </div>
       </template>
     </va-modal>
@@ -79,6 +107,9 @@ export default {
     const offers = ref([]);
     const loading = ref(false);
     const showModal = ref(false);
+    const showCancelModal = ref(false);
+    const offerToCancelId = ref(null);
+    const cancelling = ref(false);
     const selectedOffer = ref(null);
 
     const cols = [
@@ -114,7 +145,7 @@ export default {
       if (!detailsStr) return null;
       try {
         const obj = JSON.parse(detailsStr);
-        if (obj && typeof obj === 'object' && 'deposit_eur' in obj) {
+        if (obj && typeof obj === 'object') {
           return obj;
         }
         return null;
@@ -159,6 +190,27 @@ export default {
       }
     };
 
+    const openCancelModal = (id) => {
+      offerToCancelId.value = id;
+      showCancelModal.value = true;
+    };
+
+    const confirmCancel = async () => {
+      if (!offerToCancelId.value) return;
+      cancelling.value = true;
+      try {
+        await api.delete(`/offers/${offerToCancelId.value}`);
+        init({ message: 'Oferta a fost anulată cu succes.', color: 'success' });
+        showCancelModal.value = false;
+        showModal.value = false;
+        load();
+      } catch (err) {
+        init({ message: err.response?.data?.message || 'Eroare la anularea ofertei.', color: 'danger' });
+      } finally {
+        cancelling.value = false;
+      }
+    };
+
     onMounted(load);
 
     const getImageUrl = (path) => {
@@ -166,7 +218,7 @@ export default {
       return `http://localhost:3000/${path.replace(/\\/g, '/')}`;
     };
 
-    return { offers, loading, cols, showModal, selectedOffer, viewDetails, parsedDetails, acceptOffer, rejectOffer, getImageUrl };
+    return { offers, loading, cols, showModal, showCancelModal, cancelling, selectedOffer, viewDetails, parsedDetails, acceptOffer, rejectOffer, openCancelModal, confirmCancel, getImageUrl };
   }
 };
 </script>
