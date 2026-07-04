@@ -16,12 +16,57 @@
             <va-badge :color="ST[value]?.color" :text="ST[value]?.label || value" />
           </template>
           <template #cell(actions)="{ row }">
+            <va-button preset="plain" icon="visibility" title="Vizualizare contract" @click="openViewModal(row.source)" />
+            <va-button preset="plain" color="info" icon="picture_as_pdf" title="Descarcă contract (PDF)" @click="downloadPdf(row.source.id, row.source.contract_number)" />
             <va-button v-if="isAdmin && row.source.status === 'DRAFT'" preset="plain" color="success" icon="check_circle" title="Activează" @click="activate(row.source.id)" />
             <va-button v-if="isAdmin && row.source.status === 'ACTIVE'" preset="plain" color="danger" icon="cancel" title="Reziliază" @click="openTerminate(row.source.id)" />
           </template>
         </va-data-table>
       </va-card-content>
     </va-card>
+
+    <va-modal v-model="showViewModal" title="Detalii Contract de Închiriere" hide-default-actions size="medium">
+      <div v-if="selectedContract" class="contract-view-grid">
+        <div class="row mb-3">
+          <div class="flex xs6">
+            <va-input :modelValue="selectedContract.contract_number || 'DRAFT'" label="Număr Contract" readonly />
+          </div>
+          <div class="flex xs6">
+            <va-input :modelValue="ST[selectedContract.status]?.label || selectedContract.status" label="Stare Contract" readonly />
+          </div>
+        </div>
+        <va-input :modelValue="selectedContract.tenant_name || 'N/A'" label="Chiriaș (Titular)" readonly class="mb-3" />
+        <va-input :modelValue="selectedContract.property_title || 'N/A'" label="Spațiu închiriat" readonly class="mb-3" />
+        <div class="row mb-3">
+          <div class="flex xs6">
+            <va-input :modelValue="fmtDate(selectedContract.start_date)" label="Data Început" readonly />
+          </div>
+          <div class="flex xs6">
+            <va-input :modelValue="fmtDate(selectedContract.end_date)" label="Data Expirare" readonly />
+          </div>
+        </div>
+        <div class="row mb-3">
+          <div class="flex xs4">
+            <va-input :modelValue="(selectedContract.monthly_rent_eur || 0) + ' €'" label="Chirie lunară" readonly />
+          </div>
+          <div class="flex xs4">
+            <va-input :modelValue="(selectedContract.deposit_eur || 0) + ' €'" label="Garanție" readonly />
+          </div>
+          <div class="flex xs4">
+            <va-input :modelValue="`Ziua ${selectedContract.billing_day || 1}`" label="Zi de facturare" readonly />
+          </div>
+        </div>
+        <div v-if="selectedContract.status === 'TERMINATED' && selectedContract.termination_reason" class="mb-3">
+          <va-input :modelValue="selectedContract.termination_reason" label="Motiv Reziliere" readonly type="textarea" />
+        </div>
+      </div>
+      <template #footer>
+        <div class="d-flex justify-between w-full">
+          <va-button color="info" icon="picture_as_pdf" @click="downloadPdf(selectedContract.id, selectedContract.contract_number)">Descarcă PDF</va-button>
+          <va-button @click="showViewModal = false">Închide</va-button>
+        </div>
+      </template>
+    </va-modal>
 
     <va-modal v-model="showTerminateModal" title="Motiv Reziliere Contract" hide-default-actions>
       <div class="modal-form">
@@ -204,8 +249,30 @@ export default {
       catch (e) { init({ message: e.response?.data?.message || 'Eroare.', color: 'danger' }); }
     };
 
+    const downloadPdf = async (id, ctrNumber) => {
+      try {
+        const res = await api.get(`/contracts/${id}/pdf`, { responseType: 'blob' });
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `contract-${ctrNumber || 'draft'}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } catch (e) {
+        init({ message: 'Eroare la descărcarea PDF-ului', color: 'danger' });
+      }
+    };
+
+    const showViewModal = ref(false);
+    const selectedContract = ref(null);
+    const openViewModal = (contract) => {
+      selectedContract.value = contract;
+      showViewModal.value = true;
+    };
+
     onMounted(load);
-    return { contracts, loading, statusFilter, statusOptions, cols, ST: CONTRACT_STATUS, isAdmin, showModal, form, tenantOpts, propertyOpts, openCreate, save, activate, terminateId, terminateReason, showTerminateModal, openTerminate, confirmTerminate, load, fmtDate };
+    return { contracts, loading, statusFilter, statusOptions, cols, ST: CONTRACT_STATUS, isAdmin, showModal, form, tenantOpts, propertyOpts, openCreate, save, activate, terminateId, terminateReason, showTerminateModal, openTerminate, confirmTerminate, load, fmtDate, downloadPdf, showViewModal, selectedContract, openViewModal };
   }
 };
 </script>

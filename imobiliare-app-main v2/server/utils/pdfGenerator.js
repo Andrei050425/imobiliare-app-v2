@@ -130,6 +130,156 @@ function generateInvoicePDF(invoice, filePath) {
   });
 }
 
+function generateContractPDF(contract, filePath) {
+  return new Promise((resolve, reject) => {
+    const ctr = {};
+    for (const key in contract) {
+      if (typeof contract[key] === "string") {
+        ctr[key] = normalizeText(contract[key]);
+      } else {
+        ctr[key] = contract[key];
+      }
+    }
+
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    const doc = new PDFDocument({ margin: 50 });
+    const stream = fs.createWriteStream(filePath);
+    doc.pipe(stream);
+
+    // Titlu
+    doc
+      .fillColor("#111111")
+      .font("Helvetica-Bold")
+      .fontSize(16)
+      .text("CONTRACT DE INCHIRIERE SPATIU COMERCIAL / BIROU", { align: "center" })
+      .fontSize(11)
+      .text(`Nr. ${ctr.contract_number || "DRAFT"} / Data: ${new Date(ctr.start_date || Date.now()).toLocaleDateString("ro-RO")}`, { align: "center" });
+
+    doc.moveDown(1.5);
+
+    // Capitolul I. Partile contractante
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .text("I. PARTILE CONTRACTANTE", { underline: true });
+    doc.moveDown(0.5);
+    doc
+      .font("Helvetica")
+      .fontSize(10)
+      .text("1. PROPRIETAR (Locator): SANTA REAL ESTATE SRL, cu sediul in Bucuresti, Sector 1, CUI: RO12345678, reprezentata legal prin administrator.", { align: "justify" });
+    doc.moveDown(0.5);
+    doc
+      .text(`2. CHIRIAS (Locatar): ${ctr.tenant_name || "N/A"}, CUI/CNP: ${ctr.tenant_cui || "-"}, cu sediul/adresa in ${ctr.tenant_address || "-"}, reprezentat legal prin ${ctr.legal_rep_name || "reprezentant legal"}.`, { align: "justify" });
+
+    doc.moveDown(1);
+
+    // Capitolul II. Obiectul contractului
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .text("II. OBIECTUL CONTRACTULUI", { underline: true });
+    doc.moveDown(0.5);
+    doc
+      .font("Helvetica")
+      .fontSize(10)
+      .text(`Proprietarul inchirieaza, iar Chiriasul ia in chirie imobilul/spatiul denumit "${ctr.property_title || "-"}", situat in ${ctr.property_address || "-"}, avand suprafata de ${ctr.property_area || "-"} mp, in scopul desfasurarii de activitati comerciale si de birou conform specificului activitatii Chiriasului.`, { align: "justify" });
+
+    doc.moveDown(1);
+
+    // Capitolul III. Durata contractului
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .text("III. DURATA CONTRACTULUI", { underline: true });
+    doc.moveDown(0.5);
+    const startStr = ctr.start_date ? new Date(ctr.start_date).toLocaleDateString("ro-RO") : "-";
+    const endStr = ctr.end_date ? new Date(ctr.end_date).toLocaleDateString("ro-RO") : "-";
+    doc
+      .font("Helvetica")
+      .fontSize(10)
+      .text(`Prezentul contract intra in vigoare la data de ${startStr} si este valabil pana la data de ${endStr}. Contractul poate fi prelungit prin act aditional semnat de ambele parti cu cel putin 30 de zile inainte de expirare.`, { align: "justify" });
+
+    doc.moveDown(1);
+
+    // Capitolul IV. Chiria si modalitatile de plata
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .text("IV. CHIRIA SI MODALITATEA DE PLATA", { underline: true });
+    doc.moveDown(0.5);
+    doc
+      .font("Helvetica")
+      .fontSize(10)
+      .text(`1. Chiria lunara pentru folosinta spatiului este de ${ctr.monthly_rent_eur || 0} EUR/luna (la care se adauga TVA conform legii).`, { align: "justify" });
+    doc.moveDown(0.3);
+    doc
+      .text(`2. Chiriasul va achita suplimentar costurile de utilitati si mentenanta estimate la suma de ${ctr.utilities_ron || 0} RON/luna.`, { align: "justify" });
+    doc.moveDown(0.3);
+    doc
+      .text(`3. Plata se va efectua lunar in lei, la cursul BNR din ziua emiterii facturii, pana la data de ${ctr.billing_day || 1} a fiecarei luni pentru luna in curs. In caz de intarziere se aplica penalitati de 1%/zi de intarziere.`, { align: "justify" });
+    doc.moveDown(0.3);
+    doc
+      .text(`4. La semnarea contractului, Chiriasul constituie o garantie de buna executie in valoare de ${ctr.deposit_eur || 0} EUR.`, { align: "justify" });
+
+    doc.moveDown(1);
+
+    // Capitolul V. Obligatiile partilor
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .text("V. OBLIGATIILE PRINCIPALE ALE PARTILOR", { underline: true });
+    doc.moveDown(0.5);
+    doc
+      .font("Helvetica")
+      .fontSize(10)
+      .text("Locatorul se obliga sa predea spatiul in stare buna de functionare, sa asigure accesul si folosinta linistita pe toata durata contractului si sa efectueze reparatiile capitale ce cad in sarcina sa.", { align: "justify" });
+    doc.moveDown(0.3);
+    doc
+      .text("Locatarul se obliga sa foloseasca spatiul ca un bun proprietar, sa achite chiria si utilitatile la termen, sa pastreze curatenia, sa efectueze reparatiile curente de intretinere si sa nu subinchirieze spatiul fara acordul scris al Locatorului.", { align: "justify" });
+
+    doc.moveDown(1.5);
+
+    // Capitolul VI. Semnaturile
+    const signY = doc.y;
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(10)
+      .text("LOCATOR,", 50, signY)
+      .text("LOCATAR,", 350, signY);
+
+    const compY = doc.y + 10;
+    doc
+      .font("Helvetica")
+      .text("SANTA REAL ESTATE SRL", 50, compY)
+      .text(`${ctr.tenant_name || "Chirias"}`, 350, compY);
+
+    const repY = doc.y + 5;
+    doc
+      .text("Reprezentant legal", 50, repY)
+      .text(`${ctr.legal_rep_name || "Reprezentant legal"}`, 350, repY);
+
+    doc.moveDown(3);
+    doc
+      .fontSize(9)
+      .fillColor("#666666")
+      .text("Prezentul contract a fost generat electronic din platforma SANTA Real Estate Management si produce efecte juridice conform acordului partilor.", 50, doc.y, { align: "center", width: 500 });
+
+    doc.end();
+
+    stream.on("finish", () => {
+      resolve(filePath);
+    });
+    stream.on("error", (err) => {
+      reject(err);
+    });
+  });
+}
+
 module.exports = {
   generateInvoicePDF,
+  generateContractPDF,
 };

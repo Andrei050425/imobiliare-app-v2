@@ -51,7 +51,8 @@ router.get("/mine", auth, requireRole("client"), async (req, res) => {
     const contracts = await knex("contracts")
       .where({ tenant_id: tenant.id })
       .join("properties", "contracts.property_id", "properties.id")
-      .select("contracts.*", "properties.title as property_title", "properties.address");
+      .join("tenants", "contracts.tenant_id", "tenants.id")
+      .select("contracts.*", "properties.title as property_title", "properties.address as property_address", "tenants.company_name as tenant_name", "tenants.cui as tenant_cui");
     res.json(contracts);
   } catch (err) {
     console.error(err);
@@ -225,6 +226,50 @@ router.patch("/:id/extend", auth, requireRole("admin"), async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Eroare la extinderea contractului." });
+  }
+});
+
+// GET /api/contracts/:id/pdf — descarcă PDF-ul contractului de închiriere
+router.get("/:id/pdf", auth, async (req, res) => {
+  try {
+    const contract = await knex("contracts")
+      .where({ "contracts.id": req.params.id })
+      .join("tenants", "contracts.tenant_id", "tenants.id")
+      .join("properties", "contracts.property_id", "properties.id")
+      .select(
+        "contracts.*",
+        "tenants.company_name as tenant_name",
+        "tenants.cui as tenant_cui",
+        "tenants.reg_no as tenant_reg_no",
+        "tenants.address as tenant_address",
+        "tenants.email as tenant_email",
+        "tenants.phone as tenant_phone",
+        "tenants.legal_rep_name as legal_rep_name",
+        "tenants.user_id as tenant_user_id",
+        "properties.title as property_title",
+        "properties.address as property_address",
+        "properties.area as property_area",
+        "properties.price as property_price"
+      )
+      .first();
+
+    if (!contract) return res.status(404).json({ message: "Contract inexistent." });
+
+    if (req.user.role === "client" && contract.tenant_user_id !== req.user.id) {
+      return res.status(403).json({ message: "Acces interzis." });
+    }
+
+    const path = require("path");
+    const fileName = `contract-${contract.contract_number}.pdf`;
+    const filePath = path.join(__dirname, "..", "uploads", "contracts", fileName);
+
+    const { generateContractPDF } = require("../utils/pdfGenerator");
+    await generateContractPDF(contract, filePath);
+
+    res.download(filePath, fileName);
+  } catch (err) {
+    console.error("Eroare generare PDF contract:", err);
+    res.status(500).json({ message: "Eroare la generarea PDF-ului." });
   }
 });
 
