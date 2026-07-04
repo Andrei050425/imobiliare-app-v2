@@ -1,12 +1,12 @@
 <template>
   <div>
-    <div class="page-title">Cereri și Oferte</div>
+    <div class="page-title">Oferte</div>
     
     <va-tabs v-model="activeTab" class="mb-4">
       <template #tabs>
         <va-tab name="active">Oferte primite</va-tab>
         <va-tab name="sent">Oferte trimise</va-tab>
-        <va-tab name="rejected">Cereri respinse</va-tab>
+        <va-tab name="rejected">Oferte respinse</va-tab>
       </template>
     </va-tabs>
 
@@ -47,7 +47,7 @@
               preset="plain"
               color="danger"
               icon="cancel" 
-              title="Anulează cererea"
+              title="Anulează oferta"
               @click="cancelOffer(row.source.id)"
             />
           </template>
@@ -57,7 +57,7 @@
 
     <va-modal v-model="showModal" title="Trimite Ofertă" @ok="sendOffer">
       <div v-if="selectedOffer" class="modal-form">
-        <p class="mb-3">Cerere de la <strong>{{ selectedOffer.user_name }}</strong> pentru spațiul <strong>{{ selectedOffer.property_title }}</strong>.</p>
+        <p class="mb-3">Ofertă solicitată de la <strong>{{ selectedOffer.user_name }}</strong> pentru spațiul <strong>{{ selectedOffer.property_title }}</strong>.</p>
         
         <div class="row">
           <div class="flex xs6"><va-input v-model="offerData.start_date" type="date" label="Data început" class="mb-2" /></div>
@@ -142,7 +142,7 @@ export default {
       { key: 'user_name', label: 'Client' },
       { key: 'user_phone', label: 'Telefon' },
       { key: 'property_title', label: 'Spațiu' },
-      { key: 'created_at', label: 'Data cererii' },
+      { key: 'created_at', label: 'Data ofertei' },
       { key: 'offer_price', label: 'Preț Ofertat' },
       { key: 'status', label: 'Status' },
       { key: 'actions', label: 'Acțiuni' }
@@ -224,13 +224,13 @@ export default {
     };
 
     const cancelOffer = async (id) => {
-      if (!confirm('Ești sigur că vrei să anulezi/ștergi această cerere?')) return;
+      if (!confirm('Ești sigur că vrei să anulezi/ștergi această ofertă?')) return;
       try {
         await api.delete(`/offers/${id}`);
-        init({ message: 'Cererea a fost anulată cu succes.', color: 'success' });
+        init({ message: 'Oferta a fost anulată cu succes.', color: 'success' });
         load();
       } catch (err) {
-        init({ message: 'Eroare la anularea cererii.', color: 'danger' });
+        init({ message: 'Eroare la anularea ofertei.', color: 'danger' });
       }
     };
 

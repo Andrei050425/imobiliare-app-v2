@@ -258,4 +258,57 @@ router.get("/client", auth, requireRole("client"), async (req, res) => {
   }
 });
 
+// GET /api/dashboard/badges — Notificări (buline) pentru meniul lateral
+router.get("/badges", auth, async (req, res) => {
+  try {
+    const role = req.user?.role;
+    let offersCount = 0;
+    let draftContractsCount = 0;
+    let overdueInvoicesCount = 0;
+
+    if (role === "admin" || role === "contabil") {
+      if (role === "admin") {
+        const o = await knex("offers").where("status", "PENDING").count("id as c").first();
+        offersCount = Number(o?.c || 0);
+      }
+      const c = await knex("contracts").where("status", "DRAFT").count("id as c").first();
+      draftContractsCount = Number(c?.c || 0);
+
+      const i = await knex("invoices").where("status", "OVERDUE").count("id as c").first();
+      overdueInvoicesCount = Number(i?.c || 0);
+    } else if (role === "client") {
+      const tenant = await knex("tenants").where({ user_id: req.user.id }).first();
+      if (tenant) {
+        const c = await knex("contracts").where({ tenant_id: tenant.id, status: "DRAFT" }).count("id as c").first();
+        draftContractsCount = Number(c?.c || 0);
+
+        const i = await knex("invoices")
+          .join("contracts", "invoices.contract_id", "contracts.id")
+          .where("contracts.tenant_id", tenant.id)
+          .where("invoices.status", "OVERDUE")
+          .count("invoices.id as c")
+          .first();
+        overdueInvoicesCount = Number(i?.c || 0);
+      }
+      const o = await knex("offers").where({ user_id: req.user.id, status: "SENT" }).count("id as c").first();
+      offersCount = Number(o?.c || 0);
+    } else if (role === "user") {
+      const o = await knex("offers").where({ user_id: req.user.id, status: "SENT" }).count("id as c").first();
+      offersCount = Number(o?.c || 0);
+    }
+
+    res.json({
+      offers: offersCount > 0,
+      contracts: draftContractsCount > 0,
+      invoices: overdueInvoicesCount > 0,
+      offersCount,
+      draftContractsCount,
+      overdueInvoicesCount
+    });
+  } catch (err) {
+    console.error("GET /api/dashboard/badges error:", err);
+    res.status(500).json({ message: "Eroare server." });
+  }
+});
+
 module.exports = router;

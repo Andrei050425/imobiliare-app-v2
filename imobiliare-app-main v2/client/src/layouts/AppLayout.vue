@@ -51,7 +51,10 @@
             @click="handleLinkClick"
           >
             <va-icon :name="item.icon" class="mr-2" />
-            <span>{{ item.title }}</span>
+            <span class="link-title-wrap">
+              {{ item.title }}
+              <span v-if="item.badge" class="notification-dot" :class="item.badgeColor" :title="item.badgeColor === 'dot-warning' ? 'Contracte în starea Draft' : (item.badgeColor === 'dot-danger' ? 'Facturi restante' : 'Oferte noi / în așteptare')"></span>
+            </span>
           </router-link>
         </div>
         <div class="sidebar-footer">
@@ -69,10 +72,11 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useStore } from 'vuex';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useToast } from 'vuestic-ui';
+import api from '../services/api';
 
 const MENUS = {
   admin: [
@@ -83,7 +87,7 @@ const MENUS = {
     { title: 'Contracte', icon: 'description', to: '/app/contracts' },
     { title: 'Facturi', icon: 'receipt_long', to: '/app/invoices' },
     { title: 'Utilizatori', icon: 'manage_accounts', to: '/app/users' },
-    { title: 'Cereri și Oferte', icon: 'local_offer', to: '/app/offers' },
+    { title: 'Oferte', icon: 'local_offer', to: '/app/offers' },
   ],
 
   client: [
@@ -106,10 +110,55 @@ export default {
   setup() {
     const store = useStore();
     const router = useRouter();
+    const route = useRoute();
     const { init } = useToast();
     
     const role = computed(() => store.getters.userRole);
-    const menu = computed(() => MENUS[role.value] || []);
+    const badges = ref({ offers: false, contracts: false, invoices: false });
+    let badgeInterval = null;
+
+    const loadBadges = async () => {
+      if (!store.getters.isLoggedIn) return;
+      try {
+        const res = await api.get('/dashboard/badges');
+        badges.value = res.data;
+      } catch (e) {
+        console.error('Eroare la încărcarea notificărilor (buline):', e);
+      }
+    };
+
+    onMounted(() => {
+      loadBadges();
+      badgeInterval = setInterval(loadBadges, 15000);
+    });
+
+    onUnmounted(() => {
+      if (badgeInterval) clearInterval(badgeInterval);
+    });
+
+    watch(() => route.path, () => {
+      loadBadges();
+    });
+
+    const menu = computed(() => {
+      const baseMenu = MENUS[role.value] || [];
+      return baseMenu.map(item => {
+        let badge = false;
+        let badgeColor = '';
+        if (item.to === '/app/offers' || item.to === '/app/my-offers') {
+          badge = badges.value.offers;
+          badgeColor = 'dot-info';
+        } else if (item.to === '/app/contracts' || item.to === '/app/my-contracts') {
+          badge = badges.value.contracts;
+          badgeColor = 'dot-warning';
+        } else if (item.to === '/app/invoices' || item.to === '/app/my-invoices') {
+          badge = badges.value.invoices;
+          badgeColor = 'dot-danger';
+        }
+        return { ...item, badge, badgeColor };
+      });
+    });
+
     const roleLabel = computed(() => ROLE_LABELS[role.value] || '');
     const user = computed(() => store.getters.currentUser);
     const handleLogout = () => { store.dispatch('logout'); router.push('/login'); };
@@ -249,4 +298,39 @@ export default {
 .app-main { flex: 1; padding: 24px; overflow-y: auto; background: #f4f5f7; min-width: 0; }
 .w-full { width: 100%; }
 .justify-start { justify-content: flex-start; }
+
+/* Buline de notificare (meniu lateral) */
+.link-title-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.notification-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  position: absolute;
+  top: -2px;
+  right: -13px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);
+  animation: pulse-dot 2s infinite;
+}
+.dot-info {
+  background-color: #3b82f6; /* Albastru/Info — oferte noi */
+  box-shadow: 0 0 6px #3b82f6;
+}
+.dot-warning {
+  background-color: #ffc107; /* Galben/Warning — contract draft */
+  box-shadow: 0 0 6px #ffc107;
+}
+.dot-danger {
+  background-color: #e53935; /* Roșu/Danger — facturi restante */
+  box-shadow: 0 0 6px #e53935;
+}
+@keyframes pulse-dot {
+  0% { transform: scale(0.95); opacity: 0.85; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.85; }
+}
 </style>

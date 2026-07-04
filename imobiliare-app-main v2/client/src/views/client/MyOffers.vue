@@ -6,7 +6,7 @@
       <va-card-content>
         <div v-if="loading" class="text-center"><va-progress-circle indeterminate /></div>
         
-        <va-data-table v-else :items="offers" :columns="cols" no-data-html="Nu ai nicio cerere sau ofertă.">
+        <va-data-table v-else :items="offers" :columns="cols" no-data-html="Nu ai nicio ofertă.">
           <template #cell(image)="{ row }">
             <img :src="getImageUrl(row.source.image_path)" style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px; display: block;" />
           </template>
@@ -81,8 +81,8 @@
     <va-modal v-model="showCancelModal" size="small" title="Confirmare Anulare" hide-default-actions>
       <div class="text-center my-3">
         <va-icon name="warning" color="danger" size="large" class="mb-3" />
-        <p class="text-base font-bold mb-2">Sigur dorești să anulezi această cerere de ofertă?</p>
-        <p class="text-sm text--secondary">Odată anulată, cererea va fi ștearsă din sistem și vei putea trimite o nouă ofertă pentru acest spațiu.</p>
+        <p class="text-base font-bold mb-2">Sigur dorești să anulezi această ofertă?</p>
+        <p class="text-sm text--secondary">Odată anulată, oferta va fi ștearsă din sistem și vei putea trimite o nouă ofertă pentru acest spațiu.</p>
       </div>
       <template #footer>
         <div class="flex justify-center w-full gap-3 mt-3">
@@ -115,7 +115,7 @@ export default {
     const cols = [
       { key: 'image', label: 'Imagine' },
       { key: 'property_title', label: 'Spațiu' },
-      { key: 'created_at', label: 'Data cererii' },
+      { key: 'created_at', label: 'Data ofertei' },
       { key: 'status', label: 'Status' },
       { key: 'offer_price', label: 'Preț Ofertat' },
       { key: 'actions', label: '' }
