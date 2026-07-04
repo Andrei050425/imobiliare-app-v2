@@ -64,18 +64,25 @@ function generateInvoicePDF(invoice, filePath) {
     doc.text(baseVal, 400, rowTop, { width: 90, align: "right" });
 
     // Rând TVA
-    const tvaTop = rowTop + 15;
+    let currentTop = rowTop + 15;
     let baseSum = rentRon + utilitiesRon;
     let vatPercent = baseSum > 0 ? Math.round((vatRon / baseSum) * 100) : 21;
-    doc.text(`TVA (${vatPercent}%)`, 50, tvaTop);
-    doc.text(vatRon.toFixed(2), 400, tvaTop, { width: 90, align: "right" });
+    doc.text(`TVA (${vatPercent}%)`, 50, currentTop);
+    doc.text(vatRon.toFixed(2), 400, currentTop, { width: 90, align: "right" });
 
-    doc.moveTo(50, tvaTop + 15).lineTo(500, tvaTop + 15).stroke();
+    if (invoice.penalty_ron && parseFloat(invoice.penalty_ron) > 0) {
+      currentTop += 15;
+      doc.fillColor("#cc0000").text("Penalitati de intarziere (1% / zi)", 50, currentTop);
+      doc.text(`+${parseFloat(invoice.penalty_ron).toFixed(2)}`, 400, currentTop, { width: 90, align: "right" });
+      doc.fillColor("#000000");
+    }
+
+    doc.moveTo(50, currentTop + 15).lineTo(500, currentTop + 15).stroke();
 
     // Total
     doc.moveDown(2);
     doc.font("Helvetica-Bold");
-    doc.text(`Total de plata: ${invoice.total_ron} RON`, 300, tvaTop + 30, { align: "right" });
+    doc.text(`Total de plata: ${invoice.total_ron} RON`, 300, currentTop + 30, { align: "right" });
 
     // Footer
     doc.font("Helvetica").fontSize(10);

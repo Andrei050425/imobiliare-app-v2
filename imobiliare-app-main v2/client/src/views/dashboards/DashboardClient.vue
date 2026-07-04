@@ -11,7 +11,7 @@
           <div class="d-flex justify-space-between align-center">
             <div>
               <div style="font-size:0.9rem;opacity:.9;">De plată</div>
-              <div style="font-size:1.8rem;font-weight:700;">{{ fmt(data.unpaidCount > 1 ? data.outstanding : data.nextInvoice.total_ron) }} RON</div>
+              <div style="font-size:1.8rem;font-weight:700;">{{ fmt(data.unpaidCount > 1 ? data.totalToPay : data.nextInvoice.total_ron) }} RON</div>
               <div v-if="data.unpaidCount > 1" style="font-size:0.95rem;font-weight:600;opacity:.95;">
                 Ai de plătit {{ data.unpaidCount }} facturi
               </div>
@@ -26,7 +26,7 @@
 
       <div class="row">
         <div class="flex xs12 sm6"><kpi label="Contracte active" :value="data.activeContracts" icon="description" /></div>
-        <div class="flex xs12 sm6"><kpi label="Sold restant" :value="fmt(data.outstanding) + ' RON'" icon="account_balance_wallet" :color="data.outstanding > 0 ? 'danger' : 'success'" /></div>
+        <div class="flex xs12 sm6"><kpi label="Sold restant (restant după 7 zile de neachitare a facturii emise iar penalizare de 1%/zi până la plata facturii restante)" :value="fmt(data.outstanding) + ' RON'" icon="account_balance_wallet" :color="data.outstanding > 0 ? 'danger' : 'success'" /></div>
       </div>
 
       <div v-if="data.rentedProperties && data.rentedProperties.length" class="mt-4">

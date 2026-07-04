@@ -41,7 +41,9 @@
         <thead><tr><th>Denumire</th><th class="r">Valoare</th></tr></thead>
         <tbody>
           <tr><td>Chirie ({{ inv.rent_eur }} € × curs BNR {{ inv.bnr_rate }})</td><td class="r">{{ fmt(inv.rent_ron) }} RON</td></tr>
+          <tr v-if="inv.utilities_ron && inv.utilities_ron > 0"><td>Utilități</td><td class="r">{{ fmt(inv.utilities_ron) }} RON</td></tr>
           <tr><td>TVA ({{ vatPercent }}%)</td><td class="r">{{ fmt(inv.vat_ron) }} RON</td></tr>
+          <tr v-if="inv.penalty_ron > 0" style="color: var(--va-danger); font-weight: 600;"><td>Penalități de întârziere (1% / zi)</td><td class="r">+{{ fmt(inv.penalty_ron) }} RON</td></tr>
         </tbody>
         <tfoot><tr><td class="total">TOTAL DE PLATĂ</td><td class="r total">{{ fmt(inv.total_ron) }} RON</td></tr></tfoot>
       </table>

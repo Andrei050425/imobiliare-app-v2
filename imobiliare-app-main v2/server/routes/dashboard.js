@@ -3,6 +3,7 @@ const router = express.Router();
 const passport = require("passport");
 const knex = require("knex")(require("../knexfile").development);
 const requireRole = require("../middleware/roles");
+const { markOverdueInvoices } = require("../services/invoiceService");
 
 const auth = passport.authenticate("jwt", { session: false });
 
@@ -17,9 +18,33 @@ function monthBounds() {
   return { start, end };
 }
 
+async function getMonthlyStats(knex) {
+  const allInvoicesForStats = await knex("invoices").select("issue_date", "total_ron", "status");
+  const monthlyMap = {};
+  const monthNamesRo = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"];
+  for (const r of allInvoicesForStats) {
+    if (!r.issue_date) continue;
+    const d = new Date(r.issue_date);
+    const y = d.getFullYear();
+    const mIdx = d.getMonth();
+    const key = `${y}-${String(mIdx + 1).padStart(2, "0")}`;
+    const label = `${monthNamesRo[mIdx]} ${y}`;
+    if (!monthlyMap[key]) {
+      monthlyMap[key] = { key, label, invoiced: 0, collected: 0 };
+    }
+    const val = parseFloat(r.total_ron || 0);
+    monthlyMap[key].invoiced += val;
+    if (r.status === "PAID") {
+      monthlyMap[key].collected += val;
+    }
+  }
+  return Object.values(monthlyMap).sort((a, b) => b.key.localeCompare(a.key));
+}
+
 // GET /api/dashboard/admin — KPI globali
 router.get("/admin", auth, requireRole("admin"), async (req, res) => {
   try {
+    await markOverdueInvoices(knex);
     const { start, end } = monthBounds();
     const totalSpaces = await knex("properties").count("id as c").first();
     const occupied = await knex("properties").where({ status: "OCCUPIED" }).count("id as c").first();
@@ -61,6 +86,8 @@ router.get("/admin", auth, requireRole("admin"), async (req, res) => {
       .orderBy("invoices.due_date", "asc")
       .limit(10);
 
+    const monthlyStats = await getMonthlyStats(knex);
+
     const total = Number(totalSpaces.c);
     const occ = Number(occupied.c);
     res.json({
@@ -76,6 +103,48 @@ router.get("/admin", auth, requireRole("admin"), async (req, res) => {
       spacesByStatus: byStatus,
       expiringContracts: expiring,
       overdueInvoices: overdueList,
+      monthlyStats,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Eroare server." });
+  }
+});
+
+// GET /api/dashboard/contabil — KPI globali contabilitate
+router.get("/contabil", auth, requireRole("admin", "contabil"), async (req, res) => {
+  try {
+    await markOverdueInvoices(knex);
+    const { start, end } = monthBounds();
+    const invoiced = await knex("invoices")
+      .whereBetween("issue_date", [start, end])
+      .sum("total_ron as s")
+      .first();
+    const collected = await knex("invoices")
+      .where({ status: "PAID" })
+      .whereBetween("issue_date", [start, end])
+      .sum("total_ron as s")
+      .first();
+    const overdueSum = await knex("invoices").where({ status: "OVERDUE" }).sum("total_ron as s").first();
+    const overdueCount = await knex("invoices").where({ status: "OVERDUE" }).count("id as c").first();
+    const overdueList = await knex("invoices")
+      .where("invoices.status", "OVERDUE")
+      .join("contracts", "invoices.contract_id", "contracts.id")
+      .join("tenants", "contracts.tenant_id", "tenants.id")
+      .select("invoices.invoice_number", "invoices.due_date", "invoices.total_ron", "tenants.company_name as tenant_name")
+      .orderBy("invoices.due_date", "asc")
+      .limit(10);
+    const monthlyStats = await getMonthlyStats(knex);
+    const invVal = Number(invoiced.s || 0);
+    const colVal = Number(collected.s || 0);
+    res.json({
+      invoicedThisMonth: invVal,
+      collectedThisMonth: colVal,
+      collectionRate: invVal ? Math.round((colVal / invVal) * 100) : 0,
+      overdueAmount: Number(overdueSum.s || 0),
+      overdueCount: Number(overdueCount.c || 0),
+      overdueInvoices: overdueList,
+      monthlyStats,
     });
   } catch (err) {
     console.error(err);
@@ -118,6 +187,7 @@ router.get("/tehnic", auth, requireRole("admin", "tehnic"), async (req, res) => 
 // GET /api/dashboard/client — KPI pentru chiriașul autentificat
 router.get("/client", auth, requireRole("client"), async (req, res) => {
   try {
+    await markOverdueInvoices(knex);
     const tenant = await knex("tenants").where({ user_id: req.user.id }).first();
     if (!tenant) return res.json({ noTenant: true });
 
@@ -127,6 +197,13 @@ router.get("/client", auth, requireRole("client"), async (req, res) => {
       .first();
 
     const outstanding = await knex("invoices")
+      .join("contracts", "invoices.contract_id", "contracts.id")
+      .where("contracts.tenant_id", tenant.id)
+      .where("invoices.status", "OVERDUE")
+      .sum("invoices.total_ron as s")
+      .first();
+
+    const totalToPay = await knex("invoices")
       .join("contracts", "invoices.contract_id", "contracts.id")
       .where("contracts.tenant_id", tenant.id)
       .whereIn("invoices.status", ["ISSUED", "OVERDUE"])
@@ -169,6 +246,7 @@ router.get("/client", auth, requireRole("client"), async (req, res) => {
       tenantStatus: tenant.status,
       activeContracts: Number(activeContracts.c),
       outstanding: Number(outstanding.s || 0),
+      totalToPay: Number(totalToPay.s || 0),
       openMaintenance: Number(openMaint.c),
       unpaidCount: Number(unpaidInvoicesCount.c || 0),
       nextInvoice: nextInvoice || null,

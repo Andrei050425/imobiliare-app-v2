@@ -7,7 +7,19 @@
           <div class="kpi-value" :class="'text-' + (color || 'primary')">{{ value }}</div>
           <div v-if="sub" class="kpi-sub">{{ sub }}</div>
         </div>
-        <va-icon v-if="icon" :name="icon" size="large" :color="color || 'primary'" />
+        <div v-if="icon">
+          <va-button
+            v-if="iconButton"
+            preset="secondary"
+            :icon="icon"
+            :color="color || 'primary'"
+            size="large"
+            :title="iconTitle || 'Vezi istoric lunar'"
+            @click.stop="$emit('icon-click')"
+            class="kpi-action-btn"
+          />
+          <va-icon v-else :name="icon" size="large" :color="color || 'primary'" />
+        </div>
       </div>
     </va-card-content>
   </va-card>
@@ -22,7 +34,10 @@ export default {
     sub: String,
     icon: String,
     color: String,
+    iconButton: Boolean,
+    iconTitle: String,
   },
+  emits: ['icon-click'],
 };
 </script>
 
@@ -34,4 +49,14 @@ export default {
 .text-danger { color: var(--va-danger); }
 .text-warning { color: var(--va-warning); }
 .text-primary { color: var(--va-primary); }
+.kpi-action-btn {
+  cursor: pointer;
+  transform: scale(1.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 12px;
+}
+.kpi-action-btn:hover {
+  transform: scale(1.25);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
 </style>

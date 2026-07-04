@@ -16,6 +16,7 @@ const auth = passport.authenticate("jwt", { session: false });
 // GET /api/invoices — listă (admin, contabil)
 router.get("/", auth, requireRole("admin"), async (req, res) => {
   try {
+    await markOverdueInvoices(knex);
     const { status } = req.query;
     let query = knex("invoices")
       .join("contracts", "invoices.contract_id", "contracts.id")
@@ -38,6 +39,7 @@ router.get("/", auth, requireRole("admin"), async (req, res) => {
 // GET /api/invoices/mine — facturile clientului autentificat
 router.get("/mine", auth, requireRole("client"), async (req, res) => {
   try {
+    await markOverdueInvoices(knex);
     const tenant = await knex("tenants").where({ user_id: req.user.id }).first();
     if (!tenant) return res.json([]);
     const invoices = await knex("invoices")

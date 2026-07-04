@@ -4,8 +4,8 @@
     <div v-if="loading" class="text-center"><va-progress-circle indeterminate /></div>
     <div v-else>
       <div class="row">
-        <div class="flex xs12 sm6 md3"><kpi label="Facturat luna curentă" :value="fmt(data.invoicedThisMonth) + ' RON'" icon="request_quote" /></div>
-        <div class="flex xs12 sm6 md3"><kpi label="Încasat luna curentă" :value="fmt(data.collectedThisMonth) + ' RON'" icon="payments" /></div>
+        <div class="flex xs12 sm6 md3"><kpi label="Facturat luna curentă" :value="fmt(data.invoicedThisMonth) + ' RON'" icon="request_quote" icon-button icon-title="Vezi istoricul pe luni" @icon-click="showMonthlyModal = true" /></div>
+        <div class="flex xs12 sm6 md3"><kpi label="Încasat luna curentă" :value="fmt(data.collectedThisMonth) + ' RON'" icon="payments" icon-button icon-title="Vezi istoricul pe luni" @icon-click="showMonthlyModal = true" /></div>
         <div class="flex xs12 sm6 md3"><kpi label="Rată de încasare" :value="data.collectionRate + '%'" icon="percent" /></div>
         <div class="flex xs12 sm6 md3"><kpi label="Total restant" :value="fmt(data.overdueAmount) + ' RON'" :sub="data.overdueCount + ' facturi'" icon="warning" color="danger" /></div>
       </div>
@@ -22,6 +22,25 @@
           </va-data-table>
         </va-card-content>
       </va-card>
+
+      <va-modal v-model="showMonthlyModal" title="Istoric încasări și facturări pe lună" hide-default-cancel ok-text="Închide" size="large">
+        <div class="mb-3" style="color: var(--va-secondary); font-size: 0.9rem;">
+          Situația detaliată a sumelor facturate și încasate pentru fiecare lună înregistrată în sistem:
+        </div>
+        <va-data-table :items="data.monthlyStats || []" :columns="monthlyCols" no-data-html="Nu există date înregistrate.">
+          <template #cell(invoiced)="{ value }">
+            <span style="font-weight: 600; color: var(--va-text-primary);">{{ fmt(value) }} RON</span>
+          </template>
+          <template #cell(collected)="{ value }">
+            <span style="font-weight: 600; color: var(--va-success);">{{ fmt(value) }} RON</span>
+          </template>
+          <template #cell(rate)="{ row }">
+            <va-badge :color="row.source.invoiced ? (row.source.collected >= row.source.invoiced ? 'success' : 'info') : 'secondary'">
+              {{ row.source.invoiced ? Math.round((row.source.collected / row.source.invoiced) * 100) : 0 }}%
+            </va-badge>
+          </template>
+        </va-data-table>
+      </va-modal>
     </div>
   </div>
 </template>
@@ -39,12 +58,19 @@ export default {
     const data = ref({});
     const loading = ref(true);
     const generating = ref(false);
+    const showMonthlyModal = ref(false);
     const { init } = useToast();
     const cols = [
       { key: 'invoice_number', label: 'Nr. factură' },
       { key: 'tenant_name', label: 'Chiriaș' },
       { key: 'due_date', label: 'Scadență' },
       { key: 'total_ron', label: 'Total' },
+    ];
+    const monthlyCols = [
+      { key: 'label', label: 'Luna / Anul' },
+      { key: 'invoiced', label: 'Total Facturat' },
+      { key: 'collected', label: 'Total Încasat' },
+      { key: 'rate', label: 'Rată încasare' },
     ];
     const fmt = (n) => Number(n || 0).toLocaleString('ro-RO');
     const load = async () => {
@@ -62,7 +88,7 @@ export default {
       finally { generating.value = false; }
     };
     onMounted(load);
-    return { data, loading, cols, fmt, generate, generating };
+    return { data, loading, cols, monthlyCols, fmt, generate, generating, showMonthlyModal };
   }
 };
 </script>

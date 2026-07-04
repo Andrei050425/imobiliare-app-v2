@@ -10,7 +10,7 @@ const {
   markOverdueInvoices,
 } = require("../services/invoiceService");
 
-const GRACE_DAYS = parseInt(process.env.GRACE_DAYS || "5", 10);
+const GRACE_DAYS = parseInt(process.env.GRACE_DAYS || "0", 10);
 
 function startJobs(knex) {
   // Generare facturi — zilnic la 02:00

@@ -52,7 +52,8 @@ async function generateInvoiceForContract(knex, contract, options = {}) {
   const totalRon = parseFloat((base + vatRon).toFixed(2));
 
   const issueDate = now.toISOString();
-  const dueDate = new Date(year, month, now.getDate() + 15).toISOString();
+  // O factură devine restantă dacă nu este achitată în termen de 7 zile (1 săptămână)
+  const dueDate = new Date(now.getTime() + 7 * 86400000).toISOString();
 
   const invoiceNumber = await nextInvoiceNumber(knex, year);
 
@@ -70,6 +71,7 @@ async function generateInvoiceForContract(knex, contract, options = {}) {
       utilities_ron: utilitiesRon,
       vat_ron: vatRon,
       total_ron: totalRon,
+      penalty_ron: 0,
       status: "ISSUED",
     })
     .returning("*");
@@ -92,13 +94,12 @@ async function generateMonthlyInvoices(knex, options = {}) {
 }
 
 /**
- * Verifică scadențele: facturile ISSUED depășite cu > graceDays trec în OVERDUE,
- * iar chiriașii aferenți devin OVERDUE. Returnează numărul de facturi actualizate.
+ * Verifică scadențele: facturile ISSUED depășite trec în OVERDUE (termen 7 zile),
+ * iar chiriașii aferenți devin OVERDUE. Calculează penalități de 1%/zi din chiria lunară.
  */
-async function markOverdueInvoices(knex, graceDays = 5) {
-  const limit = new Date();
-  limit.setDate(limit.getDate() - graceDays);
-  const limitStr = limit.toISOString();
+async function markOverdueInvoices(knex, graceDays = 0) {
+  const now = new Date();
+  const limitStr = now.toISOString();
 
   const overdue = await knex("invoices")
     .where({ status: "ISSUED" })
@@ -106,7 +107,6 @@ async function markOverdueInvoices(knex, graceDays = 5) {
 
   for (const inv of overdue) {
     await knex("invoices").where({ id: inv.id }).update({ status: "OVERDUE" });
-    // Marcăm chiriașul ca OVERDUE
     const contract = await knex("contracts")
       .where({ id: inv.contract_id })
       .first();
@@ -116,6 +116,25 @@ async function markOverdueInvoices(knex, graceDays = 5) {
         .update({ status: "OVERDUE" });
     }
   }
+
+  // Calculăm penalitățile zilnice de 1% din valoarea chiriei lunare respective pentru toate facturile restante
+  const allOverdue = await knex("invoices").where({ status: "OVERDUE" });
+  for (const inv of allOverdue) {
+    const dueDate = new Date(inv.due_date);
+    const diffDays = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 3600 * 24));
+    const overdueDays = Math.max(1, diffDays);
+    const rentRon = parseFloat(inv.rent_ron || 0);
+    const penaltyRon = parseFloat((rentRon * 0.01 * overdueDays).toFixed(2));
+    const baseTotal = parseFloat(inv.rent_ron || 0) + parseFloat(inv.utilities_ron || 0) + parseFloat(inv.vat_ron || 0);
+    const newTotal = parseFloat((baseTotal + penaltyRon).toFixed(2));
+
+    await knex("invoices").where({ id: inv.id }).update({
+      penalty_ron: penaltyRon,
+      total_ron: newTotal,
+      updated_at: knex.fn.now()
+    });
+  }
+
   return overdue.length;
 }
 
