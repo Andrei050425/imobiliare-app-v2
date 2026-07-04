@@ -46,7 +46,8 @@
                 </h4>
                 <va-textarea v-model="form.description" label="Descriere Detaliată" :min-rows="5" :max-rows="8" class="mb-3 w-full" :rules="[rules.minLength(10)]" />
                 
-                <va-select v-model="form.status" :options="statusOptions" text-by="label" value-by="value" label="Status Curent" class="mt-3 w-full" />
+                <va-select v-model="form.status" :options="statusOptions" text-by="label" value-by="value" label="Status Curent" class="mt-3 w-full" :disabled="hasLinkedContract" />
+                <p v-if="hasLinkedContract" class="mt-1" style="color: var(--va-warning); font-size: 0.8rem;">⚠️ Statusul este gestionat automat — acest spațiu are un contract activ sau în curs de validare.</p>
               </div>
             </div>
 
@@ -114,6 +115,7 @@ export default {
     ];
     
     const statusOptions = Object.entries(SPACE_STATUS).map(([value, v]) => ({ value, label: v.label }));
+    const hasLinkedContract = ref(false);
 
     const form = reactive({
       id: null,
@@ -141,6 +143,7 @@ export default {
         const id = route.params.id;
         const res = await api.get(`/properties/${id}`);
         Object.assign(form, res.data);
+        hasLinkedContract.value = !!res.data.hasLinkedContract;
       } catch (err) {
         console.error(err);
         notify({ message: 'Eroare la preluarea datelor', color: 'danger' });
@@ -221,7 +224,7 @@ export default {
     onMounted(fetchProperty);
 
     return {
-      form, sectors, categories, statusOptions, loadingInit, loading, uploadingImage,
+      form, sectors, categories, statusOptions, hasLinkedContract, loadingInit, loading, uploadingImage,
       rules, onSubmit, getImageUrl, triggerImageUpload, uploadNewImage, deleteImage
     };
   },

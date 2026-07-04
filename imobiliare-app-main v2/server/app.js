@@ -71,8 +71,43 @@ app.get("/api/health", async (req, res) => {
 
 // --- PORNIRE SERVER ---
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
+
+  // Sincronizare automată: proprietățile cu contracte active → OCCUPIED
+  try {
+    const activePropertyIds = await knex("contracts")
+      .where("status", "ACTIVE")
+      .select("property_id");
+    if (activePropertyIds.length > 0) {
+      const ids = activePropertyIds.map((r) => r.property_id);
+      const updated = await knex("properties")
+        .whereIn("id", ids)
+        .whereNot("status", "OCCUPIED")
+        .update({ status: "OCCUPIED" });
+      if (updated > 0) {
+        console.log(`[SYNC] ${updated} proprietăți sincronizate la status OCCUPIED.`);
+      }
+    }
+    // Proprietățile cu contracte DRAFT → RESERVED
+    const draftPropertyIds = await knex("contracts")
+      .where("status", "DRAFT")
+      .select("property_id");
+    if (draftPropertyIds.length > 0) {
+      const ids = draftPropertyIds.map((r) => r.property_id);
+      const updated = await knex("properties")
+        .whereIn("id", ids)
+        .whereNot("status", "RESERVED")
+        .whereNotIn("id", activePropertyIds.map((r) => r.property_id)) // nu suprascrie OCCUPIED
+        .update({ status: "RESERVED" });
+      if (updated > 0) {
+        console.log(`[SYNC] ${updated} proprietăți sincronizate la status RESERVED.`);
+      }
+    }
+  } catch (e) {
+    console.error("[SYNC] Eroare sincronizare status proprietăți:", e.message);
+  }
+
   // Pornim sarcinile programate (generare facturi + verificare scadențe)
   try {
     startJobs(knex);

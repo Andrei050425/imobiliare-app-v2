@@ -157,6 +157,13 @@ router.get("/:id", async (req, res) => {
       }
     }
 
+    // Flag pentru front-end: dacă are contract legat, statusul nu poate fi schimbat manual
+    const linkedContract = await knex("contracts")
+      .where({ property_id: property.id })
+      .whereIn("status", ["ACTIVE", "DRAFT"])
+      .first();
+    property.hasLinkedContract = !!linkedContract;
+
     res.json(property);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
@@ -247,6 +254,18 @@ router.put("/:id", auth, async (req, res) => {
 
     const { latitude, longitude } = await geocodeAddress(req.body.address, req.body.sector);
 
+    // Protecție: dacă proprietatea are un contract activ sau draft,
+    // nu permitem schimbarea manuală a statusului în FREE.
+    let finalStatus = req.body.status || "FREE";
+    const linkedContract = await knex("contracts")
+      .where({ property_id: req.params.id })
+      .whereIn("status", ["ACTIVE", "DRAFT"])
+      .first();
+    if (linkedContract) {
+      // Forțăm statusul corect pe baza contractului existent
+      finalStatus = linkedContract.status === "ACTIVE" ? "OCCUPIED" : "RESERVED";
+    }
+
     await knex("properties")
       .where({ id: req.params.id })
       .update({
@@ -256,7 +275,7 @@ router.put("/:id", auth, async (req, res) => {
         area: req.body.area,
         address: req.body.address,
         sector: req.body.sector || null,
-        status: req.body.status || "FREE",
+        status: finalStatus,
         category_id: req.body.category_id,
         latitude: req.body.latitude ? parseFloat(req.body.latitude) : latitude,
         longitude: req.body.longitude ? parseFloat(req.body.longitude) : longitude,

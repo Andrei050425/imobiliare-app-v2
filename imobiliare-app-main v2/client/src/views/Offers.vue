@@ -6,6 +6,7 @@
       <template #tabs>
         <va-tab name="active">Oferte primite</va-tab>
         <va-tab name="sent">Oferte trimise</va-tab>
+        <va-tab name="accepted">Oferte acceptate</va-tab>
         <va-tab name="rejected">Oferte respinse</va-tab>
       </template>
     </va-tabs>
@@ -166,7 +167,8 @@ export default {
 
     const filteredOffers = computed(() => {
       if (activeTab.value === 'active') return offers.value.filter(o => o.status === 'PENDING');
-      if (activeTab.value === 'sent') return offers.value.filter(o => ['SENT', 'ACCEPTED'].includes(o.status));
+      if (activeTab.value === 'sent') return offers.value.filter(o => o.status === 'SENT');
+      if (activeTab.value === 'accepted') return offers.value.filter(o => o.status === 'ACCEPTED');
       if (activeTab.value === 'rejected') return offers.value.filter(o => o.status === 'REJECTED');
       return offers.value;
     });
