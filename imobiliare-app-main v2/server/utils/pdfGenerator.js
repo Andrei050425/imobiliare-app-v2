@@ -2,8 +2,34 @@ const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const path = require("path");
 
+function normalizeText(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/Ș|Ş/g, "S")
+    .replace(/ș|ş/g, "s")
+    .replace(/Ț|Ţ/g, "T")
+    .replace(/ț|ţ/g, "t")
+    .replace(/Ă/g, "A")
+    .replace(/ă/g, "a")
+    .replace(/Î/g, "I")
+    .replace(/î/g, "i")
+    .replace(/Â/g, "A")
+    .replace(/â/g, "a")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 function generateInvoicePDF(invoice, filePath) {
   return new Promise((resolve, reject) => {
+    const inv = {};
+    for (const key in invoice) {
+      if (typeof invoice[key] === "string") {
+        inv[key] = normalizeText(invoice[key]);
+      } else {
+        inv[key] = invoice[key];
+      }
+    }
+
     // Ne asigurăm că folderul există
     const dir = path.dirname(filePath);
     if (!fs.existsSync(dir)) {
@@ -20,9 +46,9 @@ function generateInvoicePDF(invoice, filePath) {
       .fontSize(20)
       .text("FACTURA FISCALA", 50, 50)
       .fontSize(10)
-      .text(`Seria si Numarul: SANTA-${invoice.invoice_number}`, 50, 75)
-      .text(`Data emiterii: ${new Date(invoice.issue_date).toLocaleDateString("ro-RO")}`, 50, 90)
-      .text(`Data scadenta: ${new Date(invoice.due_date).toLocaleDateString("ro-RO")}`, 50, 105);
+      .text(`Seria si Numarul: SANTA-${inv.invoice_number}`, 50, 75)
+      .text(`Data emiterii: ${new Date(inv.issue_date).toLocaleDateString("ro-RO")}`, 50, 90)
+      .text(`Data scadenta: ${new Date(inv.due_date).toLocaleDateString("ro-RO")}`, 50, 105);
 
     // Date Emitent
     doc
@@ -37,10 +63,10 @@ function generateInvoicePDF(invoice, filePath) {
     doc
       .text("Client:", 300, 130)
       .font("Helvetica-Bold")
-      .text(invoice.tenant_name || "N/A", 300, 145)
+      .text(inv.tenant_name || "N/A", 300, 145)
       .font("Helvetica")
-      .text(`CUI: ${invoice.tenant_cui || "-"}`, 300, 160)
-      .text(`Adresa: ${invoice.tenant_address || "-"}`, 300, 175);
+      .text(`CUI: ${inv.tenant_cui || "-"}`, 300, 160)
+      .text(`Adresa: ${inv.tenant_address || "-"}`, 300, 175);
 
     doc.moveDown(3);
 
@@ -56,10 +82,10 @@ function generateInvoicePDF(invoice, filePath) {
     const rowTop = tableTop + 25;
 
     // Bază chirie
-    doc.text(`Chirie lunara cf. contract ${invoice.contract_number} + Utilitati`, 50, rowTop);
-    const rentRon = parseFloat(invoice.rent_ron) || 0;
-    const utilitiesRon = parseFloat(invoice.utilities_ron) || 0;
-    const vatRon = parseFloat(invoice.vat_ron) || 0;
+    doc.text(`Chirie lunara cf. contract ${inv.contract_number} + Utilitati`, 50, rowTop);
+    const rentRon = parseFloat(inv.rent_ron) || 0;
+    const utilitiesRon = parseFloat(inv.utilities_ron) || 0;
+    const vatRon = parseFloat(inv.vat_ron) || 0;
     const baseVal = (rentRon + utilitiesRon).toFixed(2);
     doc.text(baseVal, 400, rowTop, { width: 90, align: "right" });
 
@@ -70,10 +96,10 @@ function generateInvoicePDF(invoice, filePath) {
     doc.text(`TVA (${vatPercent}%)`, 50, currentTop);
     doc.text(vatRon.toFixed(2), 400, currentTop, { width: 90, align: "right" });
 
-    if (invoice.penalty_ron && parseFloat(invoice.penalty_ron) > 0) {
+    if (inv.penalty_ron && parseFloat(inv.penalty_ron) > 0) {
       currentTop += 15;
       doc.fillColor("#cc0000").text("Penalitati de intarziere (1% / zi)", 50, currentTop);
-      doc.text(`+${parseFloat(invoice.penalty_ron).toFixed(2)}`, 400, currentTop, { width: 90, align: "right" });
+      doc.text(`+${parseFloat(inv.penalty_ron).toFixed(2)}`, 400, currentTop, { width: 90, align: "right" });
       doc.fillColor("#000000");
     }
 
@@ -82,7 +108,7 @@ function generateInvoicePDF(invoice, filePath) {
     // Total
     doc.moveDown(2);
     doc.font("Helvetica-Bold");
-    doc.text(`Total de plata: ${invoice.total_ron} RON`, 300, currentTop + 30, { align: "right" });
+    doc.text(`Total de plata: ${inv.total_ron} RON`, 300, currentTop + 30, { align: "right" });
 
     // Footer
     doc.font("Helvetica").fontSize(10);
