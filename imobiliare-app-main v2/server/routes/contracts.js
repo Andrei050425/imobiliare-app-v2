@@ -198,4 +198,34 @@ router.patch("/:id/terminate", auth, requireRole("admin"), async (req, res) => {
   }
 });
 
+// PATCH /api/contracts/:id/extend — extinde contractul cu N luni (admin)
+router.patch("/:id/extend", auth, requireRole("admin"), async (req, res) => {
+  try {
+    const contract = await knex("contracts").where({ id: req.params.id }).first();
+    if (!contract) return res.status(404).json({ message: "Contract inexistent." });
+    if (contract.status !== "ACTIVE") {
+      return res.status(400).json({ message: "Doar contractele active pot fi extinse." });
+    }
+
+    const months = parseInt(req.body.months, 10);
+    if (!months || months < 1 || months > 60) {
+      return res.status(400).json({ message: "Durata de extindere trebuie să fie între 1 și 60 de luni." });
+    }
+
+    const currentEnd = new Date(contract.end_date);
+    currentEnd.setMonth(currentEnd.getMonth() + months);
+    const newEndDate = currentEnd.toISOString().slice(0, 10);
+
+    await knex("contracts").where({ id: contract.id }).update({
+      end_date: newEndDate,
+      updated_at: knex.fn.now(),
+    });
+
+    res.json({ message: `Contract extins cu ${months} luni. Noua dată de expirare: ${newEndDate}`, new_end_date: newEndDate });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Eroare la extinderea contractului." });
+  }
+});
+
 module.exports = router;

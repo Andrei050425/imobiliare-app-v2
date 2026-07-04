@@ -74,7 +74,7 @@ router.get("/admin", auth, requireRole("admin"), async (req, res) => {
       .andWhere("end_date", "<=", new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10))
       .join("tenants", "contracts.tenant_id", "tenants.id")
       .join("properties", "contracts.property_id", "properties.id")
-      .select("contracts.contract_number", "contracts.end_date", "tenants.company_name as tenant_name", "properties.title as property_title")
+      .select("contracts.id", "contracts.contract_number", "contracts.end_date", "contracts.start_date", "contracts.monthly_rent_eur", "contracts.deposit_eur", "contracts.property_id", "tenants.company_name as tenant_name", "properties.title as property_title")
       .orderBy("contracts.end_date", "asc")
       .limit(5);
 
