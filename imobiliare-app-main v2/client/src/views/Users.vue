@@ -1,37 +1,36 @@
 <template>
   <div>
     <div class="page-title">Utilizatori</div>
-    <va-card>
-      <va-card-content>
-        <va-data-table :items="users" :columns="cols" :loading="loading">
-          <template #cell(role)="{ value }"><va-badge :color="R[value]?.color" :text="R[value]?.label || value" /></template>
-          <template #cell(actions)="{ row }">
-            <va-button v-if="row.source.role !== 'admin'" preset="plain" color="danger" icon="delete" @click="remove(row.source.id)" />
-          </template>
-        </va-data-table>
-      </va-card-content>
-    </va-card>
+    <n-card>
+      <n-data-table :columns="columns" :data="users" :loading="loading" :bordered="false" />
+    </n-card>
   </div>
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
-import { useToast } from 'vuestic-ui';
+import { ref, onMounted, h } from 'vue';
+import { useMessage, NCard, NDataTable, NButton, NTag, NIcon } from 'naive-ui';
 import api from '../services/api';
 import { ROLE } from '../services/labels';
 
 export default {
   name: 'Users',
+  components: { NCard, NDataTable, NButton, NTag, NIcon },
   setup() {
-    const { init } = useToast();
+    const message = useMessage();
     const users = ref([]);
     const loading = ref(false);
-    const cols = [
-      { key: 'id', label: 'ID' },
-      { key: 'full_name', label: 'Nume' },
-      { key: 'email', label: 'Email' },
-      { key: 'role', label: 'Rol' },
-      { key: 'actions', label: 'Acțiuni' },
+    const R = ROLE;
+    const roleTypeMap = { admin: 'error', client: 'success', user: 'info' };
+    const columns = [
+      { title: 'ID', key: 'id' },
+      { title: 'Nume', key: 'full_name' },
+      { title: 'Email', key: 'email' },
+      { title: 'Rol', key: 'role', render(row) { const r = R[row.role]; return h(NTag, { type: roleTypeMap[row.role] || 'default', size: 'small' }, { default: () => r?.label || row.role }); } },
+      { title: 'Acțiuni', key: 'actions', width: 80, render(row) {
+        if (row.role === 'admin') return null;
+        return h(NButton, { text: true, type: 'error', onClick: () => remove(row.id) }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'delete') }) });
+      }},
     ];
     const load = async () => {
       loading.value = true;
@@ -41,11 +40,11 @@ export default {
     };
     const remove = async (id) => {
       if (!confirm('Ștergi utilizatorul?')) return;
-      try { await api.delete(`/users/${id}`); init({ message: 'Șters.', color: 'success' }); load(); }
-      catch (e) { init({ message: 'Eroare.', color: 'danger' }); }
+      try { await api.delete(`/users/${id}`); message.success('Șters.'); load(); }
+      catch (e) { message.error('Eroare.'); }
     };
     onMounted(load);
-    return { users, loading, cols, R: ROLE, remove };
+    return { users, loading, columns, remove };
   }
 };
 </script>

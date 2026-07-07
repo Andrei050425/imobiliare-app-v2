@@ -1,51 +1,40 @@
 <template>
   <div>
-    <h1 class="display-5 mb-4">Oferte Recente</h1>
+    <h1 style="font-size: 1.6rem; font-weight: 600; margin-bottom: 16px;">Oferte Recente</h1>
     
     <div v-if="loading" class="text-center">Se încarcă...</div>
 
-    <div v-else class="row">
-      <div 
-        class="flex xs12 sm6 md4 lg3" 
+    <div v-else class="property-grid">
+      <n-card 
         v-for="prop in properties" 
         :key="prop.id"
+        class="item-card"
+        :bordered="true"
+        hoverable
       >
-        <va-card class="mb-4 item-card">
-          <va-image 
-            :src="getImageUrl(prop.image_path)" 
-            style="height: 200px;"
-            fit="cover"
-          />
-          <va-card-title>{{ prop.title }}</va-card-title>
-          <va-card-content>
-            <div class="mb-2">
-              <va-badge color="info" :text="prop.category_name" />
-            </div>
-            <div class="text--bold text-primary">{{ prop.price }} EUR</div>
-            <div class="text--secondary">{{ prop.area }} mp | {{ prop.address }}</div>
-          </va-card-content>
-          
-          <va-card-actions align="between">
-            <va-button 
-              preset="secondary" 
-              icon="visibility" 
-              @click="goToDetails(prop.id)"
-            >
+        <template #cover>
+          <img :src="getImageUrl(prop.image_path)" style="height: 200px; width: 100%; object-fit: cover;" />
+        </template>
+        <template #header>{{ prop.title }}</template>
+        <div style="margin-bottom: 8px;">
+          <n-tag type="info" size="small">{{ prop.category_name }}</n-tag>
+        </div>
+        <div style="font-weight: 700; color: #6366f1;">{{ prop.price }} EUR</div>
+        <div style="color: #94a3b8;">{{ prop.area }} mp | {{ prop.address }}</div>
+        <template #action>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <n-button secondary @click="goToDetails(prop.id)">
+              <template #icon><n-icon><i class="material-icons">visibility</i></n-icon></template>
               Detalii
-            </va-button>
-            
-            <va-button 
-              v-if="canDelete(prop)" 
-              color="danger" 
-              icon="delete" 
-              size="small"
-              @click="deleteProperty(prop.id)"
-            />
-          </va-card-actions>
-        </va-card>
-      </div>
+            </n-button>
+            <n-button v-if="canDelete(prop)" type="error" size="small" @click="deleteProperty(prop.id)">
+              <template #icon><n-icon><i class="material-icons">delete</i></n-icon></template>
+            </n-button>
+          </div>
+        </template>
+      </n-card>
       
-      <div v-if="properties.length === 0" class="flex xs12 text-center">
+      <div v-if="properties.length === 0" class="text-center" style="grid-column: 1 / -1;">
         <p>Nu există anunțuri momentan. Fii primul care adaugă!</p>
       </div>
     </div>
@@ -55,15 +44,17 @@
 <script>
 import { ref, onMounted, computed } from 'vue';
 import { useStore } from 'vuex';
-import { useRouter } from 'vue-router'; // 1. Importăm useRouter
+import { useRouter } from 'vue-router';
+import { NCard, NButton, NTag, NIcon } from 'naive-ui';
 import api from '../services/api';
 
 export default {
+  components: { NCard, NButton, NTag, NIcon },
   setup() {
     const properties = ref([]);
     const loading = ref(true);
     const store = useStore();
-    const router = useRouter(); // 2. Inițializăm routerul
+    const router = useRouter();
 
     const currentUser = computed(() => store.getters.currentUser);
     const isAdmin = computed(() => store.getters.isAdmin);
@@ -101,7 +92,6 @@ export default {
       }
     };
 
-    // 3. Funcția care face navigarea
     const goToDetails = (id) => {
       router.push(`/property/${id}`);
     };
@@ -114,13 +104,19 @@ export default {
       getImageUrl, 
       canDelete, 
       deleteProperty, 
-      goToDetails // Nu uita să o returnezi!
+      goToDetails
     };
   }
 }
 </script>
 
 <style scoped>
-.item-card { transition: transform 0.2s; }
+.property-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.item-card { transition: transform 0.2s; border-radius: 12px; overflow: hidden; }
 .item-card:hover { transform: translateY(-5px); }
+.text-center { text-align: center; }
 </style>

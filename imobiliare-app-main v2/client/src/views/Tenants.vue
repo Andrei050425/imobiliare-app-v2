@@ -2,80 +2,72 @@
   <div>
     <div class="page-title">Chiriași</div>
     <div class="toolbar">
-      <va-input v-model="search" placeholder="Caută după denumire sau CUI..." clearable @clear="load" @update:modelValue="val => { if (!val) load(); }" @keyup.enter="load">
-        <template #prependInner><va-icon name="search" /></template>
-      </va-input>
-      <va-select v-model="statusFilter" :options="statusOptions" text-by="label" value-by="value" placeholder="Toate stările" clearable @update:modelValue="load" />
+      <n-input v-model:value="search" placeholder="Caută după denumire sau CUI..." clearable @clear="load" @keyup.enter="load" style="max-width: 300px;">
+        <template #prefix><n-icon><i class="material-icons" style="font-size:16px">search</i></n-icon></template>
+      </n-input>
+      <n-select v-model:value="statusFilter" :options="statusOptions" placeholder="Toate stările" clearable @update:value="load" style="width: 180px;" />
       <span class="spacer"></span>
-      <va-button v-if="isAdmin" icon="add" @click="openCreate">Chiriaș nou</va-button>
+      <n-button v-if="isAdmin" type="primary" @click="openCreate">
+        <template #icon><n-icon><i class="material-icons">add</i></n-icon></template>
+        Chiriaș nou
+      </n-button>
     </div>
 
-    <va-card>
-      <va-card-content>
-        <va-data-table :items="tenants" :columns="cols" :loading="loading">
-          <template #cell(status)="{ value }">
-            <va-badge :color="ST[value]?.color" :text="ST[value]?.label || value" />
-          </template>
-          <template #cell(actions)="{ row }">
-            <va-button preset="plain" color="primary" icon="visibility" title="Detalii" @click="openDetails(row.source)" />
-            <va-button v-if="isAdmin" preset="plain" icon="edit" title="Editează" @click="openEdit(row.source)" />
-            <va-button v-if="isAdmin" preset="plain" color="danger" icon="delete" title="Șterge" @click="deleteTenant(row.source.id)" />
-          </template>
-        </va-data-table>
-      </va-card-content>
-    </va-card>
+    <n-card>
+      <n-data-table :columns="columns" :data="tenants" :loading="loading" :bordered="false" />
+    </n-card>
 
-    <va-modal v-model="showModal" :title="editing ? 'Editează chiriaș' : 'Chiriaș nou'" hide-default-actions>
-      <div class="modal-form">
-        <va-input v-model="form.company_name" label="Denumire firmă" class="mb-2" />
-        <va-input v-model="form.cui" label="CUI" class="mb-2" :disabled="editing" />
-        <va-input v-model="form.reg_no" label="Nr. Reg. Comerțului" class="mb-2" />
-        <va-input v-model="form.address" label="Adresă" class="mb-2" />
-        <va-input v-model="form.email" label="Email" class="mb-2" />
-        <va-input v-model="form.phone" label="Telefon" class="mb-2" />
-        <va-input v-model="form.legal_rep_name" label="Reprezentant legal" class="mb-2" />
-        <va-select v-if="editing" v-model="form.status" :options="statusOptions" text-by="label" value-by="value" label="Stare" class="mb-2" />
-      </div>
+    <n-modal v-model:show="showModal" :title="editing ? 'Editează chiriaș' : 'Chiriaș nou'" preset="card" style="width: 500px;">
+      <n-form-item label="Denumire firmă"><n-input v-model:value="form.company_name" /></n-form-item>
+      <n-form-item label="CUI"><n-input v-model:value="form.cui" :disabled="editing" /></n-form-item>
+      <n-form-item label="Nr. Reg. Comerțului"><n-input v-model:value="form.reg_no" /></n-form-item>
+      <n-form-item label="Adresă"><n-input v-model:value="form.address" /></n-form-item>
+      <n-form-item label="Email"><n-input v-model:value="form.email" /></n-form-item>
+      <n-form-item label="Telefon"><n-input v-model:value="form.phone" /></n-form-item>
+      <n-form-item label="Reprezentant legal"><n-input v-model:value="form.legal_rep_name" /></n-form-item>
+      <n-form-item v-if="editing" label="Stare"><n-select v-model:value="form.status" :options="statusOptions" /></n-form-item>
       <template #footer>
-        <va-button preset="secondary" @click="showModal = false">Anulează</va-button>
-        <va-button class="ml-2" @click="save">Salvează</va-button>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <n-button @click="showModal = false">Anulează</n-button>
+          <n-button type="primary" @click="save">Salvează</n-button>
+        </div>
       </template>
-    </va-modal>
+    </n-modal>
 
-    <!-- Modal detalii chiriaș -->
-    <va-modal v-model="showDetailsModal" title="Detalii Chiriaș" hide-default-actions>
-      <div class="modal-form" v-if="detailsTenant">
-        <va-input :modelValue="detailsTenant.company_name" label="Denumire firmă" class="mb-2" readonly />
-        <va-input :modelValue="detailsTenant.cui" label="CUI" class="mb-2" readonly />
-        <va-input :modelValue="detailsTenant.reg_no || '-'" label="Nr. Reg. Comerțului" class="mb-2" readonly />
-        <va-input :modelValue="detailsTenant.address || '-'" label="Adresă" class="mb-2" readonly />
-        <va-input :modelValue="detailsTenant.email || '-'" label="Email" class="mb-2" readonly />
-        <va-input :modelValue="detailsTenant.phone || '-'" label="Telefon" class="mb-2" readonly />
-        <va-input :modelValue="detailsTenant.legal_rep_name || '-'" label="Reprezentant legal" class="mb-2" readonly />
-        <div class="mt-3">
-          <span style="color: var(--va-primary); font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">Stare curentă:</span>
-          <va-badge class="ml-2" :color="ST[detailsTenant.status]?.color" :text="ST[detailsTenant.status]?.label || detailsTenant.status" />
+    <n-modal v-model:show="showDetailsModal" title="Detalii Chiriaș" preset="card" style="width: 500px;">
+      <div v-if="detailsTenant">
+        <n-form-item label="Denumire firmă"><n-input :value="detailsTenant.company_name" readonly /></n-form-item>
+        <n-form-item label="CUI"><n-input :value="detailsTenant.cui" readonly /></n-form-item>
+        <n-form-item label="Nr. Reg. Comerțului"><n-input :value="detailsTenant.reg_no || '-'" readonly /></n-form-item>
+        <n-form-item label="Adresă"><n-input :value="detailsTenant.address || '-'" readonly /></n-form-item>
+        <n-form-item label="Email"><n-input :value="detailsTenant.email || '-'" readonly /></n-form-item>
+        <n-form-item label="Telefon"><n-input :value="detailsTenant.phone || '-'" readonly /></n-form-item>
+        <n-form-item label="Reprezentant legal"><n-input :value="detailsTenant.legal_rep_name || '-'" readonly /></n-form-item>
+        <div style="margin-top: 12px;">
+          <span style="color: #6366f1; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">Stare curentă:</span>
+          <n-tag :type="statusTypeMap[detailsTenant.status] || 'default'" size="small" style="margin-left: 8px;">{{ ST[detailsTenant.status]?.label || detailsTenant.status }}</n-tag>
         </div>
       </div>
       <template #footer>
-        <va-button @click="showDetailsModal = false">Închide</va-button>
+        <n-button @click="showDetailsModal = false">Închide</n-button>
       </template>
-    </va-modal>
+    </n-modal>
   </div>
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, h } from 'vue';
 import { useStore } from 'vuex';
-import { useToast } from 'vuestic-ui';
+import { useMessage, NCard, NDataTable, NButton, NInput, NSelect, NModal, NTag, NFormItem, NIcon } from 'naive-ui';
 import api from '../services/api';
 import { TENANT_STATUS } from '../services/labels';
 
 export default {
   name: 'Tenants',
+  components: { NCard, NDataTable, NButton, NInput, NSelect, NModal, NTag, NFormItem, NIcon },
   setup() {
     const store = useStore();
-    const { init } = useToast();
+    const message = useMessage();
     const tenants = ref([]);
     const loading = ref(false);
     const search = ref('');
@@ -86,15 +78,25 @@ export default {
     const editing = ref(false);
     const form = reactive({});
     const isAdmin = computed(() => store.getters.isAdmin);
+    const ST = TENANT_STATUS;
+    const statusTypeMap = { ACTIVE: 'success', INACTIVE: 'default', OVERDUE: 'error' };
 
-    const cols = [
-      { key: 'company_name', label: 'Denumire' },
-      { key: 'cui', label: 'CUI' },
-      { key: 'email', label: 'Email' },
-      { key: 'phone', label: 'Telefon' },
-      { key: 'status', label: 'Stare' },
-      { key: 'actions', label: 'Acțiuni' },
-    ];
+    const columns = computed(() => [
+      { title: 'Denumire', key: 'company_name' },
+      { title: 'CUI', key: 'cui' },
+      { title: 'Email', key: 'email' },
+      { title: 'Telefon', key: 'phone' },
+      { title: 'Stare', key: 'status', render(row) { const s = ST[row.status]; return h(NTag, { type: statusTypeMap[row.status] || 'default', size: 'small' }, { default: () => s?.label || row.status }); } },
+      { title: 'Acțiuni', key: 'actions', width: 160, render(row) {
+        return h('div', { style: 'display: flex; gap: 14px; align-items: center;' }, [
+          h(NButton, { text: true, type: 'primary', onClick: () => openDetails(row), title: 'Detalii' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'visibility') }) }),
+          ...(isAdmin.value ? [
+            h(NButton, { text: true, type: 'primary', onClick: () => openEdit(row), title: 'Editează' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'edit') }) }),
+            h(NButton, { text: true, type: 'error', onClick: () => deleteTenant(row.id), title: 'Șterge' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'delete') }) }),
+          ] : []),
+        ]);
+      }},
+    ]);
     const statusOptions = Object.entries(TENANT_STATUS).map(([value, v]) => ({ value, label: v.label }));
 
     const load = async () => {
@@ -114,26 +116,24 @@ export default {
       try {
         if (editing.value) await api.put(`/tenants/${form.id}`, form);
         else await api.post('/tenants', form);
-        init({ message: 'Salvat cu succes.', color: 'success' });
+        message.success('Salvat cu succes.');
         showModal.value = false;
         load();
-      } catch (e) { init({ message: e.response?.data?.message || 'Eroare.', color: 'danger' }); }
+      } catch (e) { message.error(e.response?.data?.message || 'Eroare.'); }
     };
     const deleteTenant = async (id) => {
       if (!confirm('Ești sigur că vrei să ștergi acest chiriaș? Toate contractele asociate vor fi de asemenea șterse!')) return;
       try {
         await api.delete(`/tenants/${id}`);
-        init({ message: 'Chiriaș șters cu succes.', color: 'success' });
+        message.success('Chiriaș șters cu succes.');
         load();
       } catch (e) {
-        init({ message: e.response?.data?.message || 'Eroare la ștergere.', color: 'danger' });
+        message.error(e.response?.data?.message || 'Eroare la ștergere.');
       }
     };
 
     onMounted(load);
-    return { tenants, loading, search, statusFilter, statusOptions, cols, ST: TENANT_STATUS, isAdmin, showModal, showDetailsModal, detailsTenant, editing, form, openCreate, openEdit, openDetails, save, deleteTenant, load };
+    return { tenants, loading, search, statusFilter, statusOptions, columns, ST, statusTypeMap, isAdmin, showModal, showDetailsModal, detailsTenant, editing, form, openCreate, openEdit, openDetails, save, deleteTenant, load };
   }
 };
 </script>
-
-<style scoped>.modal-form { min-width: 380px; }</style>

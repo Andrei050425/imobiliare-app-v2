@@ -1,37 +1,44 @@
 <template>
   <div>
     <div class="page-title">Facturile mele</div>
-    <va-card>
-      <va-card-content>
-        <va-data-table :items="items" :columns="cols" :loading="loading" no-data-html="Nu ai facturi.">
-          <template #cell(total_ron)="{ value }">{{ fmt(value) }} RON</template>
-          <template #cell(status)="{ value }"><va-badge :color="ST[value]?.color" :text="ST[value]?.label || value" /></template>
-          <template #cell(actions)="{ row }">
-            <va-button preset="plain" icon="visibility" title="Vizualizare" @click="$router.push(`/app/invoices/${row.source.id}`)" />
-            <va-button preset="plain" color="info" icon="picture_as_pdf" title="Descarcă PDF" @click="downloadPdf(row.source.id, row.source.invoice_number)" />
-          </template>
-        </va-data-table>
-      </va-card-content>
-    </va-card>
+    <n-card :bordered="true">
+      <n-data-table :data="items" :columns="cols" :loading="loading" :bordered="false" />
+    </n-card>
   </div>
 </template>
+
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, h } from 'vue';
+import { useRouter } from 'vue-router';
+import { NCard, NDataTable, NButton, NTag, NIcon } from 'naive-ui';
 import api from '../../services/api';
 import { INVOICE_STATUS } from '../../services/labels';
+
 export default {
   name: 'MyInvoices',
+  components: { NCard, NDataTable, NButton, NTag, NIcon },
   setup() {
-    const items = ref([]); const loading = ref(true);
+    const items = ref([]); 
+    const loading = ref(true);
+    const router = useRouter();
     const fmt = (n) => Number(n || 0).toLocaleString('ro-RO');
+    const ST = INVOICE_STATUS;
+    const statusTypeMap = { ISSUED: 'info', PAID: 'success', OVERDUE: 'error', CANCELLED: 'default' };
+
     const cols = [
-      { key: 'invoice_number', label: 'Nr. factură' },
-      { key: 'issue_date', label: 'Emisă' },
-      { key: 'due_date', label: 'Scadență' },
-      { key: 'total_ron', label: 'Total' },
-      { key: 'status', label: 'Stare' },
-      { key: 'actions', label: 'Acțiuni' },
+      { key: 'invoice_number', title: 'Nr. factură' },
+      { key: 'issue_date', title: 'Emisă', render(row) { return new Date(row.issue_date).toLocaleDateString('ro-RO'); } },
+      { key: 'due_date', title: 'Scadență', render(row) { return new Date(row.due_date).toLocaleDateString('ro-RO'); } },
+      { key: 'total_ron', title: 'Total', render(row) { return `${fmt(row.total_ron)} RON`; } },
+      { key: 'status', title: 'Stare', render(row) { const s = ST[row.status]; return h(NTag, { type: statusTypeMap[row.status] || 'default', size: 'small' }, { default: () => s?.label || row.status }); } },
+      { key: 'actions', title: 'Acțiuni', width: 160, render(row) {
+        return h('div', { style: 'display: flex; gap: 10px; align-items: center;' }, [
+          h(NButton, { size: 'small', type: 'primary', secondary: true, onClick: () => router.push(`/app/invoices/${row.id}`), title: 'Vizualizare' }, { default: () => 'Vezi', icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'visibility') }) }),
+          h(NButton, { size: 'small', type: 'info', secondary: true, onClick: () => downloadPdf(row.id, row.invoice_number), title: 'Descarcă PDF' }, { default: () => 'PDF', icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'picture_as_pdf') }) }),
+        ]);
+      }},
     ];
+
     onMounted(async () => {
       try { items.value = (await api.get('/invoices/mine')).data; } catch (e) { console.error(e); }
       finally { loading.value = false; }
@@ -54,7 +61,7 @@ export default {
       }
     };
 
-    return { items, loading, cols, fmt, ST: INVOICE_STATUS, downloadPdf };
+    return { items, loading, cols, fmt, ST, downloadPdf };
   }
 };
 </script>

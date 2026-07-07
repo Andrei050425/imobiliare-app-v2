@@ -195,32 +195,32 @@ router.get("/badges", auth, async (req, res) => {
 
     if (role === "admin" || role === "contabil") {
       if (role === "admin") {
-        const o = await knex("offers").where("status", "PENDING").count("id as c").first();
+        const o = await knex("offers").whereIn("status", ["PENDING", "SENT"]).count("id as c").first();
         offersCount = Number(o?.c || 0);
       }
-      const c = await knex("contracts").where("status", "DRAFT").count("id as c").first();
+      const c = await knex("contracts").whereIn("status", ["DRAFT", "ACTIVE"]).count("id as c").first();
       draftContractsCount = Number(c?.c || 0);
 
-      const i = await knex("invoices").where("status", "OVERDUE").count("id as c").first();
+      const i = await knex("invoices").whereIn("status", ["ISSUED", "OVERDUE"]).count("id as c").first();
       overdueInvoicesCount = Number(i?.c || 0);
     } else if (role === "client") {
       const tenant = await knex("tenants").where({ user_id: req.user.id }).first();
       if (tenant) {
-        const c = await knex("contracts").where({ tenant_id: tenant.id, status: "DRAFT" }).count("id as c").first();
+        const c = await knex("contracts").where({ tenant_id: tenant.id }).whereIn("status", ["DRAFT", "ACTIVE"]).count("id as c").first();
         draftContractsCount = Number(c?.c || 0);
 
         const i = await knex("invoices")
           .join("contracts", "invoices.contract_id", "contracts.id")
           .where("contracts.tenant_id", tenant.id)
-          .where("invoices.status", "OVERDUE")
+          .whereIn("invoices.status", ["ISSUED", "OVERDUE"])
           .count("invoices.id as c")
           .first();
         overdueInvoicesCount = Number(i?.c || 0);
       }
-      const o = await knex("offers").where({ user_id: req.user.id, status: "SENT" }).count("id as c").first();
+      const o = await knex("offers").where({ user_id: req.user.id }).whereIn("status", ["PENDING", "SENT"]).count("id as c").first();
       offersCount = Number(o?.c || 0);
     } else if (role === "user") {
-      const o = await knex("offers").where({ user_id: req.user.id, status: "SENT" }).count("id as c").first();
+      const o = await knex("offers").where({ user_id: req.user.id }).whereIn("status", ["PENDING", "SENT"]).count("id as c").first();
       offersCount = Number(o?.c || 0);
     }
 

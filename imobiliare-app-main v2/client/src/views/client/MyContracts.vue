@@ -1,121 +1,86 @@
 <template>
   <div>
     <div class="page-title">Contractele mele</div>
-    <va-card>
-      <va-card-content>
-        <va-data-table :items="items" :columns="cols" :loading="loading" no-data-html="Nu ai contracte.">
-          <template #cell(monthly_rent_eur)="{ value }">{{ value }} €</template>
-          <template #cell(period)="{ row }">{{ row.source.start_date }} → {{ row.source.end_date }}</template>
-          <template #cell(status)="{ value }"><va-badge :color="ST[value]?.color" :text="ST[value]?.label || value" /></template>
-          <template #cell(actions)="{ row }">
-            <va-button
-              size="small"
-              color="info"
-              preset="secondary"
-              icon="visibility"
-              title="Vizualizare contract"
-              @click="openViewModal(row.source)"
-            >
-              Vezi
-            </va-button>
-            <va-button
-              size="small"
-              color="info"
-              preset="secondary"
-              icon="picture_as_pdf"
-              title="Descarcă contract (PDF)"
-              @click="downloadPdf(row.source.id, row.source.contract_number)"
-            >
-              PDF
-            </va-button>
-            <va-button
-              v-if="row.source.status === 'TERMINATED'"
-              size="small"
-              color="danger"
-              preset="secondary"
-              icon="info"
-              @click="showReason(row.source.termination_reason || 'Niciun motiv specificat pentru această reziliere.')"
-            >
-              Motiv reziliere
-            </va-button>
-          </template>
-        </va-data-table>
-      </va-card-content>
-    </va-card>
+    <n-card :bordered="true">
+      <n-data-table :data="items" :columns="cols" :loading="loading" :bordered="false" />
+    </n-card>
 
-    <va-modal v-model="showViewModal" title="Detalii Contract de Închiriere" hide-default-actions size="medium">
+    <n-modal v-model:show="showViewModal" title="Detalii Contract de Închiriere" preset="card" style="width: 650px;">
       <div v-if="selectedContract" class="contract-view-grid">
-        <div class="row mb-3">
-          <div class="flex xs6">
-            <va-input :modelValue="selectedContract.contract_number || 'DRAFT'" label="Număr Contract" readonly />
-          </div>
-          <div class="flex xs6">
-            <va-input :modelValue="ST[selectedContract.status]?.label || selectedContract.status" label="Stare Contract" readonly />
-          </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <n-form-item label="Număr Contract"><n-input :value="selectedContract.contract_number || 'DRAFT'" readonly /></n-form-item>
+          <n-form-item label="Stare Contract"><n-input :value="ST[selectedContract.status]?.label || selectedContract.status" readonly /></n-form-item>
         </div>
-        <va-input :modelValue="selectedContract.tenant_name || 'N/A'" label="Chiriaș (Titular)" readonly class="mb-3" />
-        <va-input :modelValue="selectedContract.property_title || 'N/A'" label="Spațiu închiriat" readonly class="mb-3" />
-        <div class="row mb-3">
-          <div class="flex xs6">
-            <va-input :modelValue="selectedContract.start_date" label="Data Început" readonly />
-          </div>
-          <div class="flex xs6">
-            <va-input :modelValue="selectedContract.end_date" label="Data Expirare" readonly />
-          </div>
+        <n-form-item label="Chiriaș (Titular)"><n-input :value="selectedContract.tenant_name || 'N/A'" readonly /></n-form-item>
+        <n-form-item label="Spațiu închiriat"><n-input :value="selectedContract.property_title || 'N/A'" readonly /></n-form-item>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+          <n-form-item label="Data Început"><n-input :value="selectedContract.start_date" readonly /></n-form-item>
+          <n-form-item label="Data Expirare"><n-input :value="selectedContract.end_date" readonly /></n-form-item>
         </div>
-        <div class="row mb-3">
-          <div class="flex xs4">
-            <va-input :modelValue="(selectedContract.monthly_rent_eur || 0) + ' €'" label="Chirie lunară" readonly />
-          </div>
-          <div class="flex xs4">
-            <va-input :modelValue="(selectedContract.deposit_eur || 0) + ' €'" label="Garanție" readonly />
-          </div>
-          <div class="flex xs4">
-            <va-input :modelValue="`Ziua ${selectedContract.billing_day || 1}`" label="Zi de facturare" readonly />
-          </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px;">
+          <n-form-item label="Chirie lunară"><n-input :value="(selectedContract.monthly_rent_eur || 0) + ' €'" readonly /></n-form-item>
+          <n-form-item label="Garanție"><n-input :value="(selectedContract.deposit_eur || 0) + ' €'" readonly /></n-form-item>
+          <n-form-item label="Zi de facturare"><n-input :value="`Ziua ${selectedContract.billing_day || 1}`" readonly /></n-form-item>
         </div>
-        <div v-if="selectedContract.status === 'TERMINATED' && selectedContract.termination_reason" class="mb-3">
-          <va-input :modelValue="selectedContract.termination_reason" label="Motiv Reziliere" readonly type="textarea" />
+        <div v-if="selectedContract.status === 'TERMINATED' && selectedContract.termination_reason" style="margin-top: 12px;">
+          <n-form-item label="Motiv Reziliere"><n-input :value="selectedContract.termination_reason" readonly type="textarea" /></n-form-item>
         </div>
       </div>
       <template #footer>
-        <div class="d-flex justify-between w-full">
-          <va-button color="info" icon="picture_as_pdf" @click="downloadPdf(selectedContract.id, selectedContract.contract_number)">Descarcă PDF</va-button>
-          <va-button @click="showViewModal = false">Închide</va-button>
+        <div style="display: flex; justify-content: space-between; width: 100%;">
+          <n-button type="info" @click="downloadPdf(selectedContract.id, selectedContract.contract_number)">
+            <template #icon><n-icon><i class="material-icons">picture_as_pdf</i></n-icon></template>
+            Descarcă PDF
+          </n-button>
+          <n-button @click="showViewModal = false">Închide</n-button>
         </div>
       </template>
-    </va-modal>
+    </n-modal>
 
-    <va-modal v-model="showModal" title="Motiv Reziliere Contract" hide-default-actions>
-      <div style="white-space: pre-line; margin-bottom: 1.5rem;">
+    <n-modal v-model:show="showModal" title="Motiv Reziliere Contract" preset="card" style="width: 450px;">
+      <div style="white-space: pre-line; margin-bottom: 1.5rem; color: #cbd5e1;">
         {{ currentReason }}
       </div>
       <template #footer>
-        <va-button @click="showModal = false">Închide</va-button>
+        <n-button @click="showModal = false">Închide</n-button>
       </template>
-    </va-modal>
+    </n-modal>
   </div>
 </template>
+
 <script>
-import { ref, onMounted } from 'vue';
-import { useToast } from 'vuestic-ui';
+import { ref, onMounted, h } from 'vue';
+import { useMessage, NCard, NDataTable, NButton, NModal, NInput, NTag, NIcon, NFormItem } from 'naive-ui';
 import api from '../../services/api';
 import { CONTRACT_STATUS } from '../../services/labels';
+
 export default {
   name: 'MyContracts',
+  components: { NCard, NDataTable, NButton, NModal, NInput, NTag, NIcon, NFormItem },
   setup() {
-    const { init } = useToast();
-    const items = ref([]); const loading = ref(true);
+    const message = useMessage();
+    const items = ref([]); 
+    const loading = ref(true);
     const showModal = ref(false);
     const currentReason = ref('');
+    const ST = CONTRACT_STATUS;
+    const statusTypeMap = { DRAFT: 'warning', ACTIVE: 'success', TERMINATED: 'error', EXPIRED: 'default' };
 
     const cols = [
-      { key: 'contract_number', label: 'Nr. contract' },
-      { key: 'property_title', label: 'Spațiu' },
-      { key: 'period', label: 'Perioadă' },
-      { key: 'monthly_rent_eur', label: 'Chirie' },
-      { key: 'status', label: 'Stare' },
-      { key: 'actions', label: '' },
+      { key: 'contract_number', title: 'Nr. contract' },
+      { key: 'property_title', title: 'Spațiu' },
+      { key: 'period', title: 'Perioadă', render(row) { return `${row.start_date} → ${row.end_date}`; } },
+      { key: 'monthly_rent_eur', title: 'Chirie', render(row) { return `${row.monthly_rent_eur} €`; } },
+      { key: 'status', title: 'Stare', render(row) { const s = ST[row.status]; return h(NTag, { type: statusTypeMap[row.status] || 'default', size: 'small' }, { default: () => s?.label || row.status }); } },
+      { key: 'actions', title: '', width: 240, render(row) {
+        return h('div', { style: 'display: flex; gap: 10px; align-items: center;' }, [
+          h(NButton, { size: 'small', type: 'info', secondary: true, onClick: () => openViewModal(row), title: 'Vizualizare contract' }, { default: () => 'Vezi', icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'visibility') }) }),
+          h(NButton, { size: 'small', type: 'info', secondary: true, onClick: () => downloadPdf(row.id, row.contract_number), title: 'Descarcă contract (PDF)' }, { default: () => 'PDF', icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'picture_as_pdf') }) }),
+          ...(row.status === 'TERMINATED' ? [
+            h(NButton, { size: 'small', type: 'error', secondary: true, onClick: () => showReason(row.termination_reason || 'Niciun motiv specificat pentru această reziliere.') }, { default: () => 'Motiv', icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'info') }) })
+          ] : [])
+        ]);
+      }},
     ];
 
     const showReason = (reason) => {
@@ -134,7 +99,7 @@ export default {
         link.click();
         link.remove();
       } catch (e) {
-        init({ message: 'Eroare la descărcarea PDF-ului', color: 'danger' });
+        message.error('Eroare la descărcarea PDF-ului');
       }
     };
 
@@ -149,7 +114,7 @@ export default {
       try { items.value = (await api.get('/contracts/mine')).data; } catch (e) { console.error(e); }
       finally { loading.value = false; }
     });
-    return { items, loading, cols, ST: CONTRACT_STATUS, showModal, currentReason, showReason, downloadPdf, showViewModal, selectedContract, openViewModal };
+    return { items, loading, cols, ST, showModal, currentReason, showReason, downloadPdf, showViewModal, selectedContract, openViewModal };
   }
 };
 </script>

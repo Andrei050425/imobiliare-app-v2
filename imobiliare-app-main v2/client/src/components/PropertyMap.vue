@@ -2,7 +2,7 @@
   <div class="property-map-container">
     <div class="map-controls">
       <button class="reset-zoom-btn" @click="resetView" title="Centrează pe București">
-        <va-icon name="my_location" size="small" />
+        <i class="material-icons" style="font-size: 18px;">my_location</i>
       </button>
     </div>
 

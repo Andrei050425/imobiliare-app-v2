@@ -1,99 +1,79 @@
 <template>
   <div class="admin-dashboard">
-    <h1 class="display-5 mb-4">Panou Administrator</h1>
+    <h1 style="font-size: 1.8rem; font-weight: 700; margin-bottom: 16px; color: #f1f5f9;">Panou Administrator</h1>
 
-    <va-card>
-      <va-card-content>
-        <va-tabs v-model="activeTab" class="mb-4">
-          <va-tab name="users">Utilizatori</va-tab>
-          <va-tab name="properties">Anunțuri Imobiliare</va-tab>
-        </va-tabs>
-
-        <div v-if="activeTab === 'users'">
-          <div class="mb-3">
-            <va-alert color="info" outline>
+    <n-card :bordered="true">
+      <n-tabs v-model:value="activeTab" type="segment" style="margin-bottom: 16px;">
+        <n-tab-pane name="users" tab="Utilizatori">
+          <div style="margin-bottom: 16px;">
+            <n-alert type="info" :bordered="true">
               Atenție: Ștergerea unui utilizator va șterge automat și toate anunțurile acestuia!
-            </va-alert>
+            </n-alert>
           </div>
           
-          <va-data-table 
-            :items="users" 
+          <n-data-table 
+            :data="users" 
             :columns="userColumns" 
-            hoverable
-          >
-            <template #cell(actions)="{ row }">
-              <va-button 
-                preset="plain" 
-                icon="delete" 
-                color="danger" 
-                @click="deleteUser(row.rowData.id)"
-                :disabled="row.rowData.role === 'admin'" 
-              />
-            </template>
-          </va-data-table>
-        </div>
+            :bordered="false"
+          />
+        </n-tab-pane>
 
-        <div v-if="activeTab === 'properties'">
-          <va-data-table 
-            :items="properties" 
+        <n-tab-pane name="properties" tab="Anunțuri Imobiliare">
+          <n-data-table 
+            :data="properties" 
             :columns="propColumns" 
-            hoverable
-          >
-            <template #cell(price)="{ value }">
-              <strong>{{ value }} €</strong>
-            </template>
-            
-            <template #cell(actions)="{ row }">
-              <va-button 
-                preset="plain" 
-                icon="visibility" 
-                color="primary" 
-                class="mr-2"
-                @click="$router.push(`/property/${row.rowData.id}`)"
-              />
-              <va-button 
-                preset="plain" 
-                icon="delete" 
-                color="danger" 
-                @click="deleteProperty(row.rowData.id)"
-              />
-            </template>
-          </va-data-table>
-        </div>
-
-      </va-card-content>
-    </va-card>
+            :bordered="false"
+          />
+        </n-tab-pane>
+      </n-tabs>
+    </n-card>
   </div>
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, h } from 'vue';
+import { useRouter } from 'vue-router';
+import { NCard, NTabs, NTabPane, NAlert, NDataTable, NButton, NIcon } from 'naive-ui';
 import api from '../services/api';
 
 export default {
+  name: 'AdminDashboard',
+  components: { NCard, NTabs, NTabPane, NAlert, NDataTable, NButton, NIcon },
   setup() {
     const activeTab = ref('users');
     const users = ref([]);
     const properties = ref([]);
+    const router = useRouter();
 
-    // Definire coloane tabel
     const userColumns = [
-      { key: 'id', label: 'ID', sortable: true },
-      { key: 'full_name', label: 'Nume', sortable: true },
-      { key: 'email', label: 'Email', sortable: true },
-      { key: 'role', label: 'Rol', sortable: true },
-      { key: 'actions', label: 'Acțiuni', width: '80px' },
+      { key: 'id', title: 'ID', sorter: (a, b) => a.id - b.id },
+      { key: 'full_name', title: 'Nume', sorter: 'default' },
+      { key: 'email', title: 'Email', sorter: 'default' },
+      { key: 'role', title: 'Rol', sorter: 'default' },
+      { key: 'actions', title: 'Acțiuni', width: 100, render(row) {
+        return h(NButton, { 
+          text: true, 
+          type: 'error', 
+          disabled: row.role === 'admin',
+          onClick: () => deleteUser(row.id),
+          title: 'Șterge utilizator'
+        }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'delete') }) });
+      }},
     ];
 
     const propColumns = [
-      { key: 'id', label: 'ID', sortable: true, width: '60px' },
-      { key: 'title', label: 'Titlu', sortable: true },
-      { key: 'category_name', label: 'Categorie', sortable: true },
-      { key: 'price', label: 'Preț', sortable: true },
-      { key: 'actions', label: 'Acțiuni', width: '120px' },
+      { key: 'id', title: 'ID', width: 60, sorter: (a, b) => a.id - b.id },
+      { key: 'title', title: 'Titlu', sorter: 'default' },
+      { key: 'category_name', title: 'Categorie', sorter: 'default' },
+      { key: 'price', title: 'Preț', sorter: (a, b) => a.price - b.price, render(row) { return h('strong', null, `${row.price} €`); } },
+      { key: 'actions', title: 'Acțiuni', width: 140, render(row) {
+        return h('div', { style: 'display: flex; gap: 14px; align-items: center;' }, [
+          h(NButton, { text: true, type: 'primary', onClick: () => router.push(`/property/${row.id}`), title: 'Vezi' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'visibility') }) }),
+          h(NButton, { text: true, type: 'error', onClick: () => deleteProperty(row.id), title: 'Șterge' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'delete') }) }),
+        ]);
+      }},
     ];
 
-    // --- FETCH DATA ---
     const loadData = async () => {
       try {
         const [usersRes, propsRes] = await Promise.all([
@@ -107,13 +87,11 @@ export default {
       }
     };
 
-    // --- ACTIONS ---
     const deleteUser = async (id) => {
       if(!confirm("Sigur ștergi acest utilizator?")) return;
       try {
         await api.delete(`/users/${id}`);
         users.value = users.value.filter(u => u.id !== id);
-        // Reîncărcăm și proprietățile pentru că s-au șters automat cele ale userului
         const propsRes = await api.get('/properties');
         properties.value = propsRes.data;
       } catch (err) {
@@ -139,5 +117,5 @@ export default {
       deleteUser, deleteProperty 
     };
   }
-}
+};
 </script>

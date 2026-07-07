@@ -1,51 +1,35 @@
 <template>
-  <va-navbar color="primary" class="mb-3">
-    <template #left>
-      <va-navbar-item class="logo">Imobiliare</va-navbar-item>
-    </template>
-    <template #right>
-      <va-navbar-item>
-        <router-link to="/" class="nav-link">Oferte</router-link>
-      </va-navbar-item>
-
+  <header class="navbar-bar">
+    <div class="navbar-left">
+      <span class="logo">Imobiliare</span>
+    </div>
+    <div class="navbar-right">
+      <router-link to="/" class="nav-link">Oferte</router-link>
       <template v-if="!isLoggedIn">
-        <va-navbar-item>
-          <router-link to="/login" class="nav-link">Login</router-link>
-        </va-navbar-item>
-        <va-navbar-item>
-          <router-link to="/register" class="nav-link">Register</router-link>
-        </va-navbar-item>
+        <router-link to="/login" class="nav-link">Login</router-link>
+        <router-link to="/register" class="nav-link">Register</router-link>
       </template>
-
       <template v-else>
-        <va-navbar-item>
-          <router-link to="/add" class="nav-link">Adaugă Anunț</router-link>
-        </va-navbar-item>
-
-        <va-navbar-item v-if="isAdmin">
-          <router-link to="/admin" class="nav-link" style="color: #FFD700;">
-            <va-icon name="admin_panel_settings" size="small" /> Admin
-          </router-link>
-        </va-navbar-item>
-
-        <va-navbar-item>
-          <span class="user-name">Salut, {{ user?.name }}</span>
-        </va-navbar-item>
-        <va-navbar-item>
-          <va-button color="danger" size="small" @click="handleLogout">Logout</va-button>
-        </va-navbar-item>
+        <router-link to="/add" class="nav-link">Adaugă Anunț</router-link>
+        <router-link v-if="isAdmin" to="/admin" class="nav-link" style="color: #FFD700;">
+          <n-icon size="16"><i class="material-icons">admin_panel_settings</i></n-icon> Admin
+        </router-link>
+        <span class="user-name">Salut, {{ user?.name }}</span>
+        <n-button type="error" size="small" @click="handleLogout">Logout</n-button>
       </template>
-    </template>
-  </va-navbar>
+    </div>
+  </header>
 </template>
 
 <script>
 import { computed } from 'vue';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
+import { NButton, NIcon } from 'naive-ui';
 
 export default {
   name: 'Navbar',
+  components: { NButton, NIcon },
   setup() {
     const store = useStore();
     const router = useRouter();
@@ -65,19 +49,18 @@ export default {
 </script>
 
 <style scoped>
-.nav-link {
-  color: white;
-  text-decoration: none;
-  margin-right: 15px;
-  font-weight: bold;
+.navbar-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 56px;
+  background: linear-gradient(135deg, #312e81, #4338ca);
+  margin-bottom: 12px;
 }
-.logo {
-  font-weight: bold;
-  font-size: 1.2rem;
-  color: white;
-}
-.user-name {
-  color: white;
-  margin-right: 10px;
-}
+.navbar-left { display: flex; align-items: center; }
+.navbar-right { display: flex; align-items: center; gap: 12px; }
+.nav-link { color: white; text-decoration: none; font-weight: bold; }
+.logo { font-weight: bold; font-size: 1.2rem; color: white; }
+.user-name { color: white; margin-right: 10px; }
 </style>

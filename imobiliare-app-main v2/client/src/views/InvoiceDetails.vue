@@ -1,11 +1,14 @@
 <template>
   <div>
     <div class="toolbar">
-      <va-button preset="secondary" icon="arrow_back" @click="$router.back()">Înapoi</va-button>
+      <n-button secondary @click="$router.back()">
+        <template #icon><n-icon><i class="material-icons">arrow_back</i></n-icon></template>
+        Înapoi
+      </n-button>
       <span class="spacer"></span>
     </div>
 
-    <div v-if="loading" class="text-center"><va-progress-circle indeterminate /></div>
+    <div v-if="loading" class="text-center"><n-spin size="medium" /></div>
 
     <div v-else-if="inv" class="invoice-sheet" id="invoice-sheet">
       <div class="inv-head">
@@ -43,12 +46,12 @@
           <tr><td>Chirie ({{ inv.rent_eur }} € × curs BNR {{ inv.bnr_rate }})</td><td class="r">{{ fmt(inv.rent_ron) }} RON</td></tr>
           <tr v-if="inv.utilities_ron && inv.utilities_ron > 0"><td>Utilități</td><td class="r">{{ fmt(inv.utilities_ron) }} RON</td></tr>
           <tr><td>TVA ({{ vatPercent }}%)</td><td class="r">{{ fmt(inv.vat_ron) }} RON</td></tr>
-          <tr v-if="inv.penalty_ron > 0" style="color: var(--va-danger); font-weight: 600;"><td>Penalități de întârziere (1% / zi)</td><td class="r">+{{ fmt(inv.penalty_ron) }} RON</td></tr>
+          <tr v-if="inv.penalty_ron > 0" style="color: #ef4444; font-weight: 600;"><td>Penalități de întârziere (1% / zi)</td><td class="r">+{{ fmt(inv.penalty_ron) }} RON</td></tr>
         </tbody>
         <tfoot><tr><td class="total">TOTAL DE PLATĂ</td><td class="r total">{{ fmt(inv.total_ron) }} RON</td></tr></tfoot>
       </table>
 
-      <div class="inv-status">Stare: <va-badge :color="ST[inv.status]?.color" :text="ST[inv.status]?.label || inv.status" /></div>
+      <div class="inv-status">Stare: <n-tag :type="statusTypeMap[inv.status] || 'default'" size="small">{{ ST[inv.status]?.label || inv.status }}</n-tag></div>
     </div>
   </div>
 </template>
@@ -56,16 +59,19 @@
 <script>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { NButton, NTag, NSpin, NIcon } from 'naive-ui';
 import api from '../services/api';
 import { INVOICE_STATUS } from '../services/labels';
 
 export default {
   name: 'InvoiceDetails',
+  components: { NButton, NTag, NSpin, NIcon },
   setup() {
     const route = useRoute();
     const inv = ref(null);
     const loading = ref(true);
     const fmt = (n) => Number(n || 0).toLocaleString('ro-RO', { minimumFractionDigits: 2 });
+    const statusTypeMap = { ISSUED: 'info', PAID: 'success', OVERDUE: 'error', CANCELLED: 'default' };
     onMounted(async () => {
       try { inv.value = (await api.get(`/invoices/${route.params.id}`)).data; }
       catch (e) { console.error(e); }
@@ -79,24 +85,25 @@ export default {
       return baseSum > 0 ? Math.round((vatRon / baseSum) * 100) : 21;
     });
 
-    return { inv, loading, fmt, vatPercent, ST: INVOICE_STATUS };
+    return { inv, loading, fmt, vatPercent, ST: INVOICE_STATUS, statusTypeMap };
   }
 };
 </script>
 
 <style scoped>
-.invoice-sheet { background: #fff; max-width: 800px; margin: 0 auto; padding: 40px; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,.08); }
-.inv-head { display: flex; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 16px; }
-.inv-head h1 { margin: 0; color: var(--va-primary); }
+.invoice-sheet { background: #1e1e2e; max-width: 800px; margin: 0 auto; padding: 40px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); }
+.inv-head { display: flex; justify-content: space-between; border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 16px; }
+.inv-head h1 { margin: 0; color: #6366f1; }
 .inv-head h2 { margin: 0; }
-.muted { color: #6b7280; font-size: .9rem; }
+.muted { color: #64748b; font-size: .9rem; }
 .text-right { text-align: right; }
 .inv-parties { display: flex; justify-content: space-between; gap: 24px; margin: 24px 0; }
-.lbl { text-transform: uppercase; font-size: .75rem; color: #9ca3af; margin-bottom: 4px; }
+.lbl { text-transform: uppercase; font-size: .75rem; color: #64748b; margin-bottom: 4px; }
 .inv-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-.inv-table th, .inv-table td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
+.inv-table th, .inv-table td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; }
 .inv-table .r { text-align: right; }
 .inv-table .total { font-weight: 700; font-size: 1.1rem; }
 .inv-status { margin-top: 20px; }
+.text-center { text-align: center; padding: 40px; }
 @media print { .toolbar { display: none; } .invoice-sheet { box-shadow: none; } }
 </style>

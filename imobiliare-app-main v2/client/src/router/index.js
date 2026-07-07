@@ -60,8 +60,11 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !isLoggedIn) {
     return next("/login");
   }
+  if (to.path === "/app/dashboard" && role === "user") {
+    return next("/");
+  }
   if (to.meta.roles && !to.meta.roles.includes(role)) {
-    return next("/app/dashboard");
+    return next(role === "user" ? "/" : "/app/dashboard");
   }
   next();
 });

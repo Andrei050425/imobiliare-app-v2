@@ -6,75 +6,77 @@
     </div>
 
     <!-- Bara de filtre sus (fixă) -->
-    <va-card class="filter-bar mb-3">
-      <va-card-content class="py-2 px-3">
-        <div class="toolbar d-flex flex-wrap gap-3 align-center">
-          <va-input v-model="filters.q" placeholder="Caută după denumire, stradă, zonă..." clearable @clear="fetchProperties" @update:modelValue="val => { if (!val) fetchProperties(); }" @keyup.enter="fetchProperties" class="grow">
-            <template #prependInner><va-icon name="search" color="secondary" /></template>
-          </va-input>
-          <va-select v-model="filters.sector" :options="sectors" placeholder="Toate sectoarele" clearable style="min-width: 150px;" />
-          <va-select v-model="filters.category_id" :options="categories" text-by="name" value-by="id" placeholder="Toate tipurile" clearable style="min-width: 170px;" />
-          <va-button color="primary" @click="fetchProperties">
-            <va-icon name="filter_list" class="mr-1" /> Caută
-          </va-button>
-        </div>
-      </va-card-content>
-    </va-card>
+    <n-card class="filter-bar mb-3" :bordered="true" content-style="padding: 12px 16px;">
+      <div class="toolbar d-flex flex-wrap gap-3 align-center">
+        <n-input v-model:value="filters.q" placeholder="Caută după denumire, stradă, zonă..." clearable @clear="fetchProperties" @update:value="val => { if (!val) fetchProperties(); }" @keyup.enter="fetchProperties" class="grow">
+          <template #prefix><n-icon><i class="material-icons" style="font-size:16px">search</i></n-icon></template>
+        </n-input>
+        <n-select v-model:value="filters.sector" :options="sectorOptions" placeholder="Toate sectoarele" clearable style="min-width: 150px;" />
+        <n-select v-model:value="filters.category_id" :options="categoryOptions" placeholder="Toate tipurile" clearable style="min-width: 170px;" />
+        <n-button type="primary" @click="fetchProperties">
+          <template #icon><n-icon><i class="material-icons">filter_list</i></n-icon></template>
+          Caută
+        </n-button>
+      </div>
+    </n-card>
 
     <div v-if="loading" class="text-center my-5 py-5">
-      <va-progress-circle indeterminate color="primary" />
-      <p class="mt-2 text-secondary">Se încarcă spațiile și harta...</p>
+      <n-spin size="large" />
+      <p class="mt-2 text-secondary" style="margin-top: 12px;">Se încarcă spațiile și harta...</p>
     </div>
 
     <!-- Split-Screen Container (Fix pe înălțimea ecranului) -->
     <div v-else class="split-layout">
       <!-- Stânga: Lista de Proprietăți (Singura zonă cu scroll vertical!) -->
       <div class="list-column">
-        <div class="d-flex justify-space-between align-center mb-3 pr-2">
+        <div class="d-flex justify-space-between align-center mb-3 pr-2" style="margin-bottom: 12px;">
           <span class="result-count"><strong>{{ properties.length }}</strong> proprietăți găsite</span>
         </div>
 
         <div v-if="properties.length === 0" class="empty-state text-center py-5">
-          <va-icon name="location_off" size="large" color="secondary" class="mb-2" />
+          <n-icon size="48" color="#64748b" style="margin-bottom: 8px;"><i class="material-icons">location_off</i></n-icon>
           <p class="text-secondary">Niciun spațiu nu corespunde filtrelor selectate.</p>
-          <va-button preset="secondary" size="small" class="mt-2" @click="resetFilters">Resetează filtrele</va-button>
+          <n-button secondary size="small" style="margin-top: 8px;" @click="resetFilters">Resetează filtrele</n-button>
         </div>
 
         <div v-else class="property-list pr-2">
-          <va-card 
+          <n-card 
             v-for="p in properties" 
             :key="p.id" 
             class="property-card mb-3"
             :class="{ 'hovered-card': hoveredId === p.id }"
+            :bordered="true"
             @mouseenter="hoveredId = p.id"
             @mouseleave="hoveredId = null"
             @click="goToDetails(p.id)"
+            style="margin-bottom: 12px;"
+            content-style="padding: 0;"
           >
             <div class="card-horizontal">
               <div class="card-image-box">
-                <va-image :src="getImageUrl(p.image_path)" fit="cover" class="card-img" />
-                <va-badge :color="catColor(p.category_name)" :text="p.category_name || 'Comercial'" class="img-badge" />
+                <img :src="getImageUrl(p.image_path)" class="card-img" />
+                <n-tag :type="catColor(p.category_name)" size="small" class="img-badge">{{ p.category_name || 'Comercial' }}</n-tag>
               </div>
               <div class="card-details-box">
-                <div class="d-flex justify-space-between align-start">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                   <h3 class="property-title">{{ p.title }}</h3>
                   <span class="property-price">{{ formatPrice(p.price) }} €</span>
                 </div>
                 <p class="property-address text-secondary">
-                  <va-icon name="place" size="small" color="secondary" /> {{ p.address }} · <strong>{{ p.sector || 'București' }}</strong>
+                  <i class="material-icons" style="font-size: 16px;">place</i> {{ p.address }} · <strong>{{ p.sector || 'București' }}</strong>
                 </p>
                 <div class="property-meta mt-auto">
                   <div class="meta-item">
-                    <va-icon name="straighten" size="small" color="secondary" /> <span><strong>{{ p.area }}</strong> m²</span>
+                    <i class="material-icons" style="font-size: 16px;">straighten</i> <span><strong>{{ p.area }}</strong> m²</span>
                   </div>
                   <div class="meta-item">
-                    <va-icon name="payments" size="small" color="secondary" /> <span><strong>{{ Math.round(p.price / p.area) }}</strong> €/m²</span>
+                    <i class="material-icons" style="font-size: 16px;">payments</i> <span><strong>{{ Math.round(p.price / p.area) }}</strong> €/m²</span>
                   </div>
-                  <va-button preset="secondary" size="small" class="ml-auto details-link">Detalii →</va-button>
+                  <n-button secondary size="small" style="margin-left: auto;" class="details-link">Detalii →</n-button>
                 </div>
               </div>
             </div>
-          </va-card>
+          </n-card>
         </div>
       </div>
 
@@ -93,15 +95,17 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { NCard, NInput, NSelect, NButton, NIcon, NSpin, NTag, useNotification } from 'naive-ui';
 import api from '../services/api';
 import PropertyMap from '../components/PropertyMap.vue';
 
 export default {
   name: 'Catalog',
-  components: { PropertyMap },
+  components: { NCard, NInput, NSelect, NButton, NIcon, NSpin, NTag, PropertyMap },
   setup() {
+    const notification = useNotification();
     const properties = ref([]);
     const categories = ref([]);
     const loading = ref(true);
@@ -109,6 +113,9 @@ export default {
     const router = useRouter();
     const sectors = ['Sector 1', 'Sector 2', 'Sector 3', 'Sector 4', 'Sector 5', 'Sector 6'];
     const filters = reactive({ q: '', sector: null, category_id: null });
+
+    const sectorOptions = computed(() => sectors.map(s => ({ value: s, label: s })));
+    const categoryOptions = computed(() => categories.value.map(c => ({ value: c.id, label: c.name })));
 
     const fetchProperties = async () => {
       loading.value = true;
@@ -144,7 +151,7 @@ export default {
     };
 
     const catColor = (name) => {
-      if (!name) return 'secondary';
+      if (!name) return 'default';
       if (name.includes('Birou')) return 'info';
       if (name.includes('Comercial') || name.includes('Retail')) return 'warning';
       return 'success';
@@ -153,6 +160,14 @@ export default {
     const goToDetails = (id) => router.push(`/property/${id}`);
 
     onMounted(async () => {
+      if (sessionStorage.getItem('justRegistered') === 'true') {
+        sessionStorage.removeItem('justRegistered');
+        notification.success({
+          title: 'Bine ai venit în comunitatea SANTA!',
+          content: 'Contul tău a fost creat cu succes. Pentru moment, ai acces de utilizator și poți explora catalogul de spații sau trimite oferte.',
+          duration: 8000,
+        });
+      }
       try {
         const res = await api.get('/categories');
         categories.value = res.data;
@@ -171,6 +186,8 @@ export default {
       properties, 
       categories, 
       sectors, 
+      sectorOptions,
+      categoryOptions,
       filters, 
       loading, 
       hoveredId,
@@ -190,11 +207,11 @@ export default {
 .catalog-split-page {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 112px); /* 100vh minus navbar (64px) minus padding AppLayout (48px) */
+  height: calc(100vh - 112px);
   max-width: 1600px;
   margin: 0 auto;
   font-family: 'Outfit', sans-serif;
-  overflow: hidden; /* Fără scroll pe pagina generală */
+  overflow: hidden;
 }
 
 .hero {
@@ -204,18 +221,16 @@ export default {
 .page-title {
   font-size: 1.6rem;
   font-weight: 700;
-  color: #1e293b;
+  color: #f1f5f9;
   margin: 0;
 }
 .page-subtitle {
-  color: #64748b;
+  color: #94a3b8;
   margin: 2px 0 0;
   font-size: 0.95rem;
 }
 
 .filter-bar {
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
   border-radius: 12px;
   flex-shrink: 0;
 }
@@ -224,16 +239,14 @@ export default {
   min-width: 200px;
 }
 
-/* --- SPLIT LAYOUT (50% Listă stânga, 50% Hartă dreapta) --- */
 .split-layout {
   display: flex;
   gap: 20px;
   flex: 1;
-  min-height: 0; /* Critic pentru flexbox shrink și scroll intern */
+  min-height: 0;
   overflow: hidden;
 }
 
-/* Coloana Stânga: LISTA DE PROPRIETĂȚI (Singura cu scroll!) */
 .list-column {
   flex: 1;
   width: 50%;
@@ -245,23 +258,11 @@ export default {
   flex-direction: column;
 }
 
-/* Custom Scrollbar pentru lista din stânga */
-.list-column::-webkit-scrollbar {
-  width: 6px;
-}
-.list-column::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
-}
-.list-column::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
-.list-column::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
+.list-column::-webkit-scrollbar { width: 6px; }
+.list-column::-webkit-scrollbar-track { background: #1e1e2e; border-radius: 4px; }
+.list-column::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+.list-column::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-/* Coloana Dreapta: HARTA (Complet Fixă!) */
 .map-column {
   flex: 1;
   width: 50%;
@@ -275,8 +276,8 @@ export default {
   height: 100%;
   border-radius: 16px;
   overflow: hidden;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
 }
 
 .map-wrapper :deep(.property-map-container) {
@@ -284,142 +285,41 @@ export default {
   min-height: 100% !important;
 }
 
-/* --- CARD PROPRIETATE IN LISTA --- */
-.result-count {
-  font-size: 0.95rem;
-  color: #64748b;
-}
+.result-count { font-size: 0.95rem; color: #94a3b8; }
 
 .property-card {
-  border: 1px solid #e2e8f0;
   border-radius: 14px;
   overflow: hidden;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   cursor: pointer;
-  background: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   flex-shrink: 0;
 }
 
 .property-card:hover,
 .property-card.hovered-card {
   transform: translateY(-3px) scale(1.008);
-  box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.15);
-  border-color: #10b981;
+  box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.25);
+  border-color: #6366f1 !important;
 }
 
-.card-horizontal {
-  display: flex;
-  height: 170px;
-}
+.card-horizontal { display: flex; height: 170px; }
+.card-image-box { position: relative; width: 200px; min-width: 200px; height: 100%; background: #1e293b; }
+.card-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.img-badge { position: absolute; top: 10px; left: 10px; z-index: 2; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+.card-details-box { flex: 1; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+.property-title { font-size: 1.1rem; font-weight: 700; color: #f1f5f9; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.property-price { font-size: 1.2rem; font-weight: 800; color: #10b981; white-space: nowrap; margin-left: 8px; }
+.property-address { font-size: 0.85rem; margin: 4px 0 10px 0; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #94a3b8; }
+.property-meta { display: flex; align-items: center; gap: 14px; font-size: 0.88rem; color: #cbd5e1; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 10px; }
+.meta-item { display: flex; align-items: center; gap: 4px; }
+.details-link { font-weight: 600; }
 
-.card-image-box {
-  position: relative;
-  width: 200px;
-  min-width: 200px;
-  height: 100%;
-  background: #f1f5f9;
-}
-
-.card-img {
-  width: 100%;
-  height: 100%;
-}
-
-.img-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 2;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-
-.card-details-box {
-  flex: 1;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  overflow: hidden;
-}
-
-.property-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.property-price {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: #10b981;
-  white-space: nowrap;
-  margin-left: 8px;
-}
-
-.property-address {
-  font-size: 0.85rem;
-  margin: 4px 0 10px 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.property-meta {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 0.88rem;
-  color: #475569;
-  border-top: 1px solid #f1f5f9;
-  padding-top: 10px;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.details-link {
-  font-weight: 600;
-}
-
-/* Responsive: pe ecrane mai mici, stivuim pe verticală și lăsăm scroll normal */
 @media (max-width: 1024px) {
-  .catalog-split-page {
-    height: auto;
-    overflow: visible;
-  }
-  .split-layout {
-    flex-direction: column;
-    height: auto;
-    overflow: visible;
-  }
-  .list-column, .map-column {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    overflow: visible;
-  }
-  .map-wrapper {
-    height: 450px;
-    margin-top: 20px;
-  }
-  .card-horizontal {
-    height: auto;
-    flex-direction: column;
-  }
-  .card-image-box {
-    width: 100%;
-    height: 180px;
-  }
+  .catalog-split-page { height: auto; overflow: visible; }
+  .split-layout { flex-direction: column; height: auto; overflow: visible; }
+  .list-column, .map-column { width: 100%; max-width: 100%; height: auto; overflow: visible; }
+  .map-wrapper { height: 450px; margin-top: 20px; }
+  .card-horizontal { height: auto; flex-direction: column; }
+  .card-image-box { width: 100%; height: 180px; }
 }
 </style>

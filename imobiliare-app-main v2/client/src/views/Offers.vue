@@ -2,126 +2,84 @@
   <div>
     <div class="page-title">Oferte</div>
     
-    <va-tabs v-model="activeTab" class="mb-4">
-      <template #tabs>
-        <va-tab name="active">Oferte primite</va-tab>
-        <va-tab name="sent">Oferte trimise</va-tab>
-        <va-tab name="accepted">Oferte acceptate</va-tab>
-        <va-tab name="rejected">Oferte respinse</va-tab>
-      </template>
-    </va-tabs>
+    <n-tabs v-model:value="activeTab" type="segment" style="margin-bottom: 16px;">
+      <n-tab-pane name="active" tab="Oferte primite"></n-tab-pane>
+      <n-tab-pane name="sent" tab="Oferte trimise"></n-tab-pane>
+      <n-tab-pane name="accepted" tab="Oferte acceptate"></n-tab-pane>
+      <n-tab-pane name="rejected" tab="Oferte respinse"></n-tab-pane>
+    </n-tabs>
 
-    <va-card>
-      <va-card-content>
-        <div v-if="loading" class="text-center"><va-progress-circle indeterminate /></div>
-        <va-data-table v-else :items="filteredOffers" :columns="cols" no-data-html="Nu există date.">
-          <template #cell(image)="{ row }">
-            <img :src="getImageUrl(row.source.image_path)" style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px; display: block;" />
-          </template>
-          <template #cell(offer_price)="{ value }">
-            {{ value ? value + ' EUR' : '-' }}
-          </template>
-          <template #cell(status)="{ value }">
-            <va-badge 
-              :color="value === 'PENDING' ? 'warning' : (value === 'REJECTED' ? 'danger' : (value === 'ACCEPTED' ? 'success' : 'info'))" 
-              :text="value === 'PENDING' ? 'În așteptare' : (value === 'REJECTED' ? 'Refuzată' : (value === 'ACCEPTED' ? 'Acceptată' : 'Trimisă'))" 
-            />
-          </template>
-          <template #cell(actions)="{ row }">
-            <va-button 
-              preset="plain"
-              color="info"
-              icon="visibility" 
-              title="Vizualizare ofertă / detalii"
-              @click="openDetailsModal(row.source)"
-            />
-            <va-button 
-              v-if="row.source.status === 'PENDING'" 
-              preset="plain"
-              color="primary"
-              icon="send" 
-              title="Trimite răspuns / ofertă"
-              @click="openModal(row.source)"
-            />
-            <va-button 
-              v-if="row.source.status === 'PENDING'" 
-              preset="plain"
-              color="danger"
-              icon="cancel" 
-              title="Anulează oferta"
-              @click="cancelOffer(row.source.id)"
-            />
-          </template>
-        </va-data-table>
-      </va-card-content>
-    </va-card>
-
-    <va-modal v-model="showModal" title="Trimite Ofertă" @ok="sendOffer">
-      <div v-if="selectedOffer" class="modal-form">
-        <p class="mb-3">Ofertă solicitată de la <strong>{{ selectedOffer.user_name }}</strong> pentru spațiul <strong>{{ selectedOffer.property_title }}</strong>.</p>
-        
-        <div class="row">
-          <div class="flex xs6"><va-input v-model="offerData.start_date" type="date" label="Data început" class="mb-2" /></div>
-          <div class="flex xs6"><va-input v-model="offerData.end_date" type="date" label="Data sfârșit" class="mb-2" /></div>
-        </div>
-        <div class="row">
-          <div class="flex xs6"><va-input v-model.number="offerData.price" type="number" label="Chirie lunară (EUR)" class="mb-2" @update:modelValue="offerData.deposit_eur = offerData.price * 2" /></div>
-          <div class="flex xs6"><va-input v-model.number="offerData.deposit_eur" type="number" label="Garanție (EUR)" class="mb-2" /></div>
-        </div>
-        
-
-        <va-input 
-          v-model="offerData.details" 
-          label="Detalii / Mesaj" 
-          type="textarea" 
-          :min-rows="2" 
-          bordered 
-        />
+    <n-card>
+      <div v-if="loading" style="display: flex; justify-content: center; padding: 40px;">
+        <n-spin size="medium" />
       </div>
-    </va-modal>
+      <n-data-table v-else :columns="columns" :data="filteredOffers" :bordered="false" />
+    </n-card>
 
-    <va-modal v-model="showDetailsModal" title="Detalii Ofertă" hide-default-actions>
-      <div v-if="selectedDetails" class="modal-form">
-        <va-input :modelValue="selectedDetails.user_name" label="Client" class="mb-2" readonly />
-        <va-input :modelValue="selectedDetails.property_title" label="Spațiu vizat" class="mb-2" readonly />
-        <va-input :modelValue="selectedDetails.offer_price + ' EUR'" label="Chirie ofertată" class="mb-2" readonly />
-        <va-input :modelValue="selectedDetails.deposit_eur ? (selectedDetails.deposit_eur + ' EUR') : '-'" label="Garanție" class="mb-2" readonly />
-        <div class="row">
-          <div class="flex xs6"><va-input :modelValue="selectedDetails.start_date || '-'" label="Data început" class="mb-2" readonly /></div>
-          <div class="flex xs6"><va-input :modelValue="selectedDetails.end_date || '-'" label="Data sfârșit" class="mb-2" readonly /></div>
+    <n-modal v-model:show="showModal" title="Trimite Ofertă" preset="card" style="width: 600px;">
+      <div v-if="selectedOffer" class="modal-form">
+        <p style="margin-bottom: 12px;">Ofertă solicitată de la <strong>{{ selectedOffer.user_name }}</strong> pentru spațiul <strong>{{ selectedOffer.property_title }}</strong>.</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <n-form-item label="Data început"><n-input v-model:value="offerData.start_date" type="text" placeholder="YYYY-MM-DD" /></n-form-item>
+          <n-form-item label="Data sfârșit"><n-input v-model:value="offerData.end_date" type="text" placeholder="YYYY-MM-DD" /></n-form-item>
         </div>
-        <va-input :modelValue="selectedDetails.message || selectedDetails.details || (typeof selectedDetails.offer_details === 'string' && !selectedDetails.offer_details.startsWith('{') ? selectedDetails.offer_details : '-')" label="Mesaj / Detalii" type="textarea" class="mb-2" readonly />
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <n-form-item label="Chirie lunară (EUR)"><n-input-number v-model:value="offerData.price" :min="0" @update:value="v => offerData.deposit_eur = v * 2" /></n-form-item>
+          <n-form-item label="Garanție (EUR)"><n-input-number v-model:value="offerData.deposit_eur" :min="0" :disabled="true" :show-button="false" /></n-form-item>
+        </div>
+        <n-form-item label="Detalii / Mesaj"><n-input v-model:value="offerData.details" type="textarea" :rows="2" /></n-form-item>
+      </div>
+      <template #footer>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <n-button @click="showModal = false">Anulează</n-button>
+          <n-button type="primary" @click="sendOffer">Trimite oferta</n-button>
+        </div>
+      </template>
+    </n-modal>
+
+    <n-modal v-model:show="showDetailsModal" title="Detalii Ofertă" preset="card" style="width: 600px;">
+      <div v-if="selectedDetails">
+        <n-form-item label="Client"><n-input :value="selectedDetails.user_name" readonly /></n-form-item>
+        <n-form-item label="Spațiu vizat"><n-input :value="selectedDetails.property_title" readonly /></n-form-item>
+        <n-form-item label="Chirie ofertată"><n-input :value="selectedDetails.offer_price + ' EUR'" readonly /></n-form-item>
+        <n-form-item label="Garanție"><n-input :value="selectedDetails.deposit_eur !== undefined && selectedDetails.deposit_eur !== null ? (selectedDetails.deposit_eur + ' EUR') : '-'" readonly /></n-form-item>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <n-form-item label="Data început"><n-input :value="selectedDetails.start_date || '-'" readonly /></n-form-item>
+          <n-form-item label="Data sfârșit"><n-input :value="selectedDetails.end_date || '-'" readonly /></n-form-item>
+        </div>
+        <n-form-item label="Mesaj / Detalii"><n-input :value="selectedDetails.message || selectedDetails.details || (typeof selectedDetails.offer_details === 'string' && !selectedDetails.offer_details.startsWith('{') ? selectedDetails.offer_details : '-')" readonly type="textarea" /></n-form-item>
         
-        <div class="mt-3">
-          <span style="color: var(--va-primary); font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">Status curent:</span>
-          <va-badge class="ml-2" 
-            :color="selectedDetails.status === 'PENDING' ? 'warning' : (selectedDetails.status === 'REJECTED' ? 'danger' : (selectedDetails.status === 'ACCEPTED' ? 'success' : 'info'))" 
-            :text="selectedDetails.status === 'PENDING' ? 'Ofertă primită (în așteptare)' : (selectedDetails.status === 'REJECTED' ? 'Refuzată' : (selectedDetails.status === 'ACCEPTED' ? 'Acceptată' : 'Trimisă'))" 
-          />
+        <div style="margin-top: 12px;">
+          <span style="color: #6366f1; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">Status curent:</span>
+          <n-tag :type="selectedDetails.status === 'PENDING' ? 'warning' : (selectedDetails.status === 'REJECTED' ? 'error' : (selectedDetails.status === 'ACCEPTED' ? 'success' : 'info'))" size="small" style="margin-left: 8px;">
+            {{ selectedDetails.status === 'PENDING' ? 'Ofertă primită (în așteptare)' : (selectedDetails.status === 'REJECTED' ? 'Refuzată' : (selectedDetails.status === 'ACCEPTED' ? 'Acceptată' : 'Trimisă')) }}
+          </n-tag>
         </div>
       </div>
       <template #footer>
-        <va-button v-if="selectedDetails && selectedDetails.status === 'PENDING'" color="primary" icon="send" class="mr-2" @click="showDetailsModal = false; openModal(selectedDetails)">
+        <n-button v-if="selectedDetails && selectedDetails.status === 'PENDING'" type="primary" @click="showDetailsModal = false; openModal(selectedDetails)" style="margin-right: 8px;">
+          <template #icon><n-icon><i class="material-icons">send</i></n-icon></template>
           Răspunde / Trimite contract
-        </va-button>
-        <va-button @click="showDetailsModal = false">Închide</va-button>
+        </n-button>
+        <n-button @click="showDetailsModal = false">Închide</n-button>
       </template>
-    </va-modal>
+    </n-modal>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from 'vue';
-import { useToast } from 'vuestic-ui';
+import { ref, computed, onMounted, watch, h } from 'vue';
+import { useMessage, NCard, NDataTable, NButton, NInput, NInputNumber, NSelect, NModal, NTag, NFormItem, NTabs, NTabPane, NSpin, NIcon } from 'naive-ui';
 import api from '../services/api';
 
 export default {
   name: 'Offers',
+  components: { NCard, NDataTable, NButton, NInput, NInputNumber, NSelect, NModal, NTag, NFormItem, NTabs, NTabPane, NSpin, NIcon },
   setup() {
-    const { init } = useToast();
+    const message = useMessage();
     const offers = ref([]);
     const loading = ref(false);
-    const activeTab = ref('active'); // 'active', 'sent', 'rejected'
+    const activeTab = ref('active');
     const showModal = ref(false);
     const showDetailsModal = ref(false);
     const selectedDetails = ref(null);
@@ -138,31 +96,39 @@ export default {
       }
     });
 
-    const cols = [
-      { key: 'image', label: 'Imagine' },
-      { key: 'user_name', label: 'Client' },
-      { key: 'user_phone', label: 'Telefon' },
-      { key: 'property_title', label: 'Spațiu' },
-      { key: 'created_at', label: 'Data ofertei' },
-      { key: 'offer_price', label: 'Preț Ofertat' },
-      { key: 'status', label: 'Status' },
-      { key: 'actions', label: 'Acțiuni' }
+    const columns = [
+      { title: 'Imagine', key: 'image', width: 80, render(row) { return h('img', { src: getImageUrl(row.image_path), style: 'width: 60px; height: 40px; object-fit: cover; border-radius: 4px; display: block;' }); } },
+      { title: 'Client', key: 'user_name' },
+      { title: 'Telefon', key: 'user_phone' },
+      { title: 'Spațiu', key: 'property_title' },
+      { title: 'Data ofertei', key: 'created_at' },
+      { title: 'Preț Ofertat', key: 'offer_price', render(row) { return row.offer_price ? row.offer_price + ' EUR' : '-'; } },
+      { title: 'Status', key: 'status', render(row) {
+        const typeMap = { PENDING: 'warning', REJECTED: 'error', ACCEPTED: 'success', SENT: 'info' };
+        const labelMap = { PENDING: 'În așteptare', REJECTED: 'Refuzată', ACCEPTED: 'Acceptată', SENT: 'Trimisă' };
+        return h(NTag, { type: typeMap[row.status] || 'default', size: 'small' }, { default: () => labelMap[row.status] || row.status });
+      }},
+      { title: 'Acțiuni', key: 'actions', width: 160, render(row) {
+        return h('div', { style: 'display: flex; gap: 14px; align-items: center;' }, [
+          h(NButton, { text: true, type: 'info', onClick: () => openDetailsModal(row), title: 'Vizualizare ofertă' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'visibility') }) }),
+          ...(row.status === 'PENDING' ? [
+            h(NButton, { text: true, type: 'primary', onClick: () => openModal(row), title: 'Trimite răspuns' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'send') }) }),
+            h(NButton, { text: true, type: 'error', onClick: () => cancelOffer(row.id), title: 'Anulează oferta' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'cancel') }) }),
+          ] : []),
+        ]);
+      }},
     ];
 
     const load = async () => {
       loading.value = true;
       try {
         const res = await api.get('/offers');
-        // Format date string for readability
         offers.value = res.data.map(o => ({
           ...o,
           created_at: new Date(o.created_at).toLocaleDateString('ro-RO')
         }));
-      } catch (err) {
-        console.error(err);
-      } finally {
-        loading.value = false;
-      }
+      } catch (err) { console.error(err); }
+      finally { loading.value = false; }
     };
 
     const filteredOffers = computed(() => {
@@ -181,68 +147,53 @@ export default {
     const openModal = (offer) => {
       selectedOffer.value = offer;
       let parsed = {};
-      if (offer.offer_details) {
-        try { parsed = JSON.parse(offer.offer_details); } catch(e) {}
-      }
+      if (offer.offer_details) { try { parsed = JSON.parse(offer.offer_details); } catch(e) {} }
       const price = offer.offer_price || offer.property_price || 0;
+      const deposit = parsed.deposit_eur !== undefined && parsed.deposit_eur !== null ? parsed.deposit_eur : price * 2;
       offerData.value = { 
-        start_date: parsed.start_date || '',
-        end_date: parsed.end_date || '',
-        price: price, 
-        deposit_eur: parsed.deposit_eur || price * 2,
-        utilities_ron: parsed.utilities_ron || 0,
-        details: parsed.message || parsed.details || '' 
+        start_date: parsed.start_date || '', end_date: parsed.end_date || '',
+        price: price, deposit_eur: deposit,
+        utilities_ron: parsed.utilities_ron || 0, details: parsed.message || parsed.details || ''
       };
       showModal.value = true;
     };
 
     const openDetailsModal = (offer) => {
       let parsed = {};
-      if (offer.offer_details) {
-        try { parsed = JSON.parse(offer.offer_details); } catch(e) {}
-      }
-      selectedDetails.value = { ...offer, ...parsed };
+      if (offer.offer_details) { try { parsed = JSON.parse(offer.offer_details); } catch(e) {} }
+      const price = offer.offer_price || offer.property_price || 0;
+      const deposit = parsed.deposit_eur !== undefined && parsed.deposit_eur !== null ? parsed.deposit_eur : price * 2;
+      selectedDetails.value = { ...offer, ...parsed, deposit_eur: deposit };
       showDetailsModal.value = true;
     };
 
     const sendOffer = async () => {
       try {
         const composedDetails = JSON.stringify({
-          start_date: offerData.value.start_date,
-          end_date: offerData.value.end_date,
-          deposit_eur: offerData.value.deposit_eur,
-          utilities_ron: offerData.value.utilities_ron,
+          start_date: offerData.value.start_date, end_date: offerData.value.end_date,
+          deposit_eur: offerData.value.deposit_eur, utilities_ron: offerData.value.utilities_ron,
           message: offerData.value.details
         });
         await api.patch(`/offers/${selectedOffer.value.id}/send`, {
-          offer_price: Number(offerData.value.price),
-          offer_details: composedDetails
+          offer_price: Number(offerData.value.price), offer_details: composedDetails
         });
-        init({ message: 'Oferta a fost trimisă cu succes!', color: 'success' });
+        message.success('Oferta a fost trimisă cu succes!');
+        showModal.value = false;
         load();
-      } catch (err) {
-        init({ message: 'Eroare la trimiterea ofertei.', color: 'danger' });
-      }
+      } catch (err) { message.error('Eroare la trimiterea ofertei.'); }
     };
 
     const cancelOffer = async (id) => {
       if (!confirm('Ești sigur că vrei să anulezi/ștergi această ofertă?')) return;
       try {
         await api.delete(`/offers/${id}`);
-        init({ message: 'Oferta a fost anulată cu succes.', color: 'success' });
+        message.success('Oferta a fost anulată cu succes.');
         load();
-      } catch (err) {
-        init({ message: 'Eroare la anularea ofertei.', color: 'danger' });
-      }
+      } catch (err) { message.error('Eroare la anularea ofertei.'); }
     };
 
     onMounted(load);
-
-    return {
-      offers, loading, activeTab, cols, filteredOffers, getImageUrl,
-      showModal, showDetailsModal, selectedOffer, selectedDetails, offerData, 
-      openModal, openDetailsModal, sendOffer, cancelOffer
-    };
+    return { offers, loading, activeTab, columns, filteredOffers, getImageUrl, showModal, showDetailsModal, selectedOffer, selectedDetails, offerData, openModal, openDetailsModal, sendOffer, cancelOffer };
   }
 };
 </script>

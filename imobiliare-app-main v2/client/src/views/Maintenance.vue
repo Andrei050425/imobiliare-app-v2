@@ -2,49 +2,50 @@
   <div>
     <div class="page-title">Intervenții tehnice</div>
     <div class="toolbar">
-      <va-select v-model="statusFilter" :options="statusOptions" text-by="label" value-by="value" placeholder="Toate stările" clearable @update:modelValue="load" />
-      <va-select v-model="prioFilter" :options="prioOptions" text-by="label" value-by="value" placeholder="Toate prioritățile" clearable @update:modelValue="load" />
+      <n-select v-model:value="statusFilter" :options="statusOptions" placeholder="Toate stările" clearable @update:value="load" style="width: 180px;" />
+      <n-select v-model:value="prioFilter" :options="prioOptions" placeholder="Toate prioritățile" clearable @update:value="load" style="width: 180px;" />
       <span class="spacer"></span>
-      <va-button icon="add" @click="openCreate">Intervenție nouă</va-button>
+      <n-button type="primary" @click="openCreate">
+        <template #icon><n-icon><i class="material-icons">add</i></n-icon></template>
+        Intervenție nouă
+      </n-button>
     </div>
 
-    <va-card>
-      <va-card-content>
-        <va-data-table :items="items" :columns="cols" :loading="loading">
-          <template #cell(priority)="{ value }"><va-badge :color="P[value]?.color" :text="P[value]?.label || value" /></template>
-          <template #cell(status)="{ value }"><va-badge :color="MS[value]?.color" :text="MS[value]?.label || value" /></template>
-          <template #cell(actions)="{ row }">
-            <va-button v-if="row.source.status === 'OPEN'" preset="plain" color="info" icon="engineering" title="În lucru" @click="setStatus(row.source.id, 'IN_PROGRESS')" />
-            <va-button v-if="row.source.status !== 'RESOLVED'" preset="plain" color="success" icon="task_alt" title="Rezolvă" @click="resolve(row.source.id)" />
-          </template>
-        </va-data-table>
-      </va-card-content>
-    </va-card>
+    <n-card>
+      <n-data-table :columns="columns" :data="items" :loading="loading" :bordered="false" />
+    </n-card>
 
-    <va-modal v-model="showModal" title="Intervenție nouă" hide-default-actions>
-      <div class="modal-form">
-        <va-select v-model="form.property_id" :options="propertyOpts" text-by="label" value-by="value" label="Spațiu" searchable placeholder="Caută spațiu..." class="mb-2" />
-        <va-select v-model="form.priority" :options="prioOptions" text-by="label" value-by="value" label="Prioritate" class="mb-2" />
-        <va-textarea v-model="form.description" label="Descrierea problemei" :min-rows="3" class="mb-2" />
-      </div>
+    <n-modal v-model:show="showModal" title="Intervenție nouă" preset="card" style="width: 600px;">
+      <n-form-item label="Spațiu">
+        <n-select v-model:value="form.property_id" :options="propertyOpts" filterable placeholder="Caută spațiu..." />
+      </n-form-item>
+      <n-form-item label="Prioritate">
+        <n-select v-model:value="form.priority" :options="prioOptions" />
+      </n-form-item>
+      <n-form-item label="Descrierea problemei">
+        <n-input v-model:value="form.description" type="textarea" :rows="3" />
+      </n-form-item>
       <template #footer>
-        <va-button preset="secondary" @click="showModal = false">Anulează</va-button>
-        <va-button class="ml-2" @click="save">Trimite</va-button>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <n-button @click="showModal = false">Anulează</n-button>
+          <n-button type="primary" @click="save">Trimite</n-button>
+        </div>
       </template>
-    </va-modal>
+    </n-modal>
   </div>
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue';
-import { useToast } from 'vuestic-ui';
+import { ref, reactive, onMounted, h } from 'vue';
+import { useMessage, NCard, NDataTable, NButton, NInput, NSelect, NModal, NTag, NFormItem, NIcon } from 'naive-ui';
 import api from '../services/api';
 import { PRIORITY, MAINT_STATUS } from '../services/labels';
 
 export default {
   name: 'Maintenance',
+  components: { NCard, NDataTable, NButton, NInput, NSelect, NModal, NTag, NFormItem, NIcon },
   setup() {
-    const { init } = useToast();
+    const message = useMessage();
     const items = ref([]);
     const loading = ref(false);
     const statusFilter = ref(null);
@@ -52,13 +53,23 @@ export default {
     const showModal = ref(false);
     const form = reactive({ priority: 'MEDIUM' });
     const propertyOpts = ref([]);
-    const cols = [
-      { key: 'property_title', label: 'Spațiu' },
-      { key: 'description', label: 'Descriere' },
-      { key: 'priority', label: 'Prioritate' },
-      { key: 'employee_name', label: 'Responsabil' },
-      { key: 'status', label: 'Stare' },
-      { key: 'actions', label: '' },
+    const P = PRIORITY;
+    const MS = MAINT_STATUS;
+    const prioTypeMap = { LOW: 'default', MEDIUM: 'warning', HIGH: 'error', CRITICAL: 'error' };
+    const statusTypeMap = { OPEN: 'warning', IN_PROGRESS: 'info', RESOLVED: 'success' };
+
+    const columns = [
+      { title: 'Spațiu', key: 'property_title' },
+      { title: 'Descriere', key: 'description' },
+      { title: 'Prioritate', key: 'priority', render(row) { const p = P[row.priority]; return h(NTag, { type: prioTypeMap[row.priority] || 'default', size: 'small' }, { default: () => p?.label || row.priority }); } },
+      { title: 'Responsabil', key: 'employee_name' },
+      { title: 'Stare', key: 'status', render(row) { const s = MS[row.status]; return h(NTag, { type: statusTypeMap[row.status] || 'default', size: 'small' }, { default: () => s?.label || row.status }); } },
+      { title: '', key: 'actions', width: 120, render(row) {
+        return h('div', { style: 'display: flex; gap: 14px; align-items: center;' }, [
+          ...(row.status === 'OPEN' ? [h(NButton, { text: true, type: 'info', onClick: () => setStatus(row.id, 'IN_PROGRESS'), title: 'În lucru' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'engineering') }) })] : []),
+          ...(row.status !== 'RESOLVED' ? [h(NButton, { text: true, type: 'success', onClick: () => resolve(row.id), title: 'Rezolvă' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'task_alt') }) })] : []),
+        ]);
+      }},
     ];
     const statusOptions = Object.entries(MAINT_STATUS).map(([value, v]) => ({ value, label: v.label }));
     const prioOptions = Object.entries(PRIORITY).map(([value, v]) => ({ value, label: v.label }));
@@ -76,30 +87,26 @@ export default {
       Object.keys(form).forEach(k => delete form[k]); form.priority = 'MEDIUM';
       const props = (await api.get('/properties')).data;
       propertyOpts.value = props.map(p => {
-        const cleanAddr = p.address
-          .replace(/,\s*Bucure[sș]ti/gi, '')
-          .replace(/,\s*Rom[aâ]nia/gi, '')
-          .replace(/,\s*Sector\s*\d/gi, '')
-          .trim();
+        const cleanAddr = p.address.replace(/,\s*Bucure[sș]ti/gi, '').replace(/,\s*Rom[aâ]nia/gi, '').replace(/,\s*Sector\s*\d/gi, '').trim();
         return { value: p.id, label: `🏢 ${p.title}  —  📍 ${cleanAddr}` };
       });
       showModal.value = true;
     };
     const save = async () => {
-      try { await api.post('/maintenance', form); init({ message: 'Intervenție creată.', color: 'success' }); showModal.value = false; load(); }
-      catch (e) { init({ message: e.response?.data?.message || 'Eroare.', color: 'danger' }); }
+      try { await api.post('/maintenance', form); message.success('Intervenție creată.'); showModal.value = false; load(); }
+      catch (e) { message.error(e.response?.data?.message || 'Eroare.'); }
     };
     const setStatus = async (id, status) => {
       try { await api.patch(`/maintenance/${id}`, { status }); load(); }
-      catch (e) { init({ message: 'Eroare.', color: 'danger' }); }
+      catch (e) { message.error('Eroare.'); }
     };
     const resolve = async (id) => {
       const notes = prompt('Note privind soluția:') || '';
-      try { await api.patch(`/maintenance/${id}`, { status: 'RESOLVED', resolution_notes: notes }); init({ message: 'Marcată rezolvată.', color: 'success' }); load(); }
-      catch (e) { init({ message: 'Eroare.', color: 'danger' }); }
+      try { await api.patch(`/maintenance/${id}`, { status: 'RESOLVED', resolution_notes: notes }); message.success('Marcată rezolvată.'); load(); }
+      catch (e) { message.error('Eroare.'); }
     };
     onMounted(load);
-    return { items, loading, statusFilter, prioFilter, statusOptions, prioOptions, cols, P: PRIORITY, MS: MAINT_STATUS, showModal, form, propertyOpts, openCreate, save, setStatus, resolve, load };
+    return { items, loading, statusFilter, prioFilter, statusOptions, prioOptions, columns, showModal, form, propertyOpts, openCreate, save, setStatus, resolve, load };
   }
 };
 </script>

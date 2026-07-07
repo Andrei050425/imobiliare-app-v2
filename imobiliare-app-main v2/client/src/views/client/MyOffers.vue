@@ -2,107 +2,79 @@
   <div>
     <div class="page-title">Ofertele mele</div>
 
-    <va-card>
-      <va-card-content>
-        <div v-if="loading" class="text-center"><va-progress-circle indeterminate /></div>
-        
-        <va-data-table v-else :items="offers" :columns="cols" no-data-html="Nu ai nicio ofertă.">
-          <template #cell(image)="{ row }">
-            <img :src="getImageUrl(row.source.image_path)" style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px; display: block;" />
-          </template>
-          <template #cell(status)="{ value }">
-            <va-badge 
-              :color="value === 'PENDING' ? 'warning' : (value === 'REJECTED' ? 'danger' : 'success')" 
-              :text="value === 'PENDING' ? 'În așteptare' : (value === 'REJECTED' ? 'Ofertă refuzată' : (value === 'ACCEPTED' ? 'Ofertă acceptată' : 'Ofertă primită'))" 
-            />
-          </template>
-          <template #cell(offer_price)="{ value }">
-            <span v-if="value">{{ value }} EUR</span>
-            <span v-else class="text--secondary">-</span>
-          </template>
-          <template #cell(actions)="{ row }">
-            <va-button 
-              size="small" 
-              preset="secondary"
-              icon="visibility" 
-              @click="viewDetails(row.source)"
-              class="mr-2"
-            >
-              Vezi ofertă
-            </va-button>
-            <va-button 
-              v-if="row.source.status === 'PENDING'"
-              size="small" 
-              color="danger"
-              preset="secondary"
-              icon="delete" 
-              @click="openCancelModal(row.source.id)"
-            >
-              Anulează
-            </va-button>
-          </template>
-        </va-data-table>
-      </va-card-content>
-    </va-card>
+    <n-card :bordered="true">
+      <div v-if="loading" class="text-center" style="padding: 40px; display: flex; justify-content: center;"><n-spin size="large" /></div>
+      
+      <n-data-table v-else :data="offers" :columns="cols" :bordered="false" />
+    </n-card>
 
-    <va-modal v-model="showModal" title="Detalii Ofertă" hide-default-actions>
+    <n-modal v-model:show="showModal" title="Detalii Ofertă" preset="card" style="width: 550px;">
       <div v-if="selectedOffer">
-        <p class="mb-3">Preț propus: <strong>{{ selectedOffer.offer_price }} EUR</strong></p>
-        <va-card color="background-element">
-          <va-card-content v-if="parsedDetails(selectedOffer.offer_details)">
-            <div class="mb-2" v-if="parsedDetails(selectedOffer.offer_details).start_date && parsedDetails(selectedOffer.offer_details).end_date">
+        <p class="mb-3" style="margin-bottom: 12px; color: #f1f5f9;">Preț propus: <strong style="color: #10b981;">{{ selectedOffer.offer_price }} EUR</strong></p>
+        <n-card :bordered="true" style="background: rgba(255, 255, 255, 0.03);">
+          <div v-if="parsedDetails(selectedOffer.offer_details)">
+            <div class="mb-2" style="margin-bottom: 8px; color: #cbd5e1;" v-if="parsedDetails(selectedOffer.offer_details).start_date && parsedDetails(selectedOffer.offer_details).end_date">
               <strong>Perioadă contract:</strong> {{ parsedDetails(selectedOffer.offer_details).start_date }} &rarr; {{ parsedDetails(selectedOffer.offer_details).end_date }}
             </div>
-            <div class="mb-2" v-if="parsedDetails(selectedOffer.offer_details).deposit_eur"><strong>Garanție:</strong> {{ parsedDetails(selectedOffer.offer_details).deposit_eur }} EUR</div>
-            <hr class="my-3" v-if="parsedDetails(selectedOffer.offer_details).message" />
-            <p style="white-space: pre-line;" v-if="parsedDetails(selectedOffer.offer_details).message">{{ parsedDetails(selectedOffer.offer_details).message }}</p>
-          </va-card-content>
-          <va-card-content v-else style="white-space: pre-line;">
+            <div class="mb-2" style="margin-bottom: 8px; color: #cbd5e1;" v-if="parsedDetails(selectedOffer.offer_details)?.deposit_eur !== undefined"><strong>Garanție:</strong> {{ parsedDetails(selectedOffer.offer_details).deposit_eur }} EUR</div>
+            <hr class="my-3" style="border-color: rgba(255, 255, 255, 0.1); margin: 12px 0;" v-if="parsedDetails(selectedOffer.offer_details).message" />
+            <p style="white-space: pre-line; color: #cbd5e1;" v-if="parsedDetails(selectedOffer.offer_details).message">{{ parsedDetails(selectedOffer.offer_details).message }}</p>
+          </div>
+          <div v-else style="white-space: pre-line; color: #cbd5e1;">
             {{ selectedOffer.offer_details || 'Niciun mesaj suplimentar.' }}
-          </va-card-content>
-        </va-card>
+          </div>
+        </n-card>
       </div>
       <template #footer>
-        <div v-if="selectedOffer && selectedOffer.status === 'SENT'">
-          <va-button color="danger" preset="secondary" @click="rejectOffer(selectedOffer.id)" class="mr-2">Refuză</va-button>
-          <va-button color="success" @click="acceptOffer(selectedOffer.id)" class="mr-4">Acceptă</va-button>
-          <va-button @click="showModal = false">Închide</va-button>
-        </div>
-        <div v-else-if="selectedOffer && selectedOffer.status === 'PENDING'">
-          <va-button color="danger" icon="delete" @click="openCancelModal(selectedOffer.id)" class="mr-2">Anulează ofertă</va-button>
-          <va-button @click="showModal = false">Închide</va-button>
-        </div>
-        <div v-else>
-          <va-button @click="showModal = false">Închide</va-button>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; width: 100%;">
+          <template v-if="selectedOffer && selectedOffer.status === 'SENT'">
+            <n-button type="error" secondary @click="rejectOffer(selectedOffer.id)">Refuză</n-button>
+            <n-button type="success" @click="acceptOffer(selectedOffer.id)">Acceptă</n-button>
+            <n-button @click="showModal = false">Închide</n-button>
+          </template>
+          <template v-else-if="selectedOffer && selectedOffer.status === 'PENDING'">
+            <n-button type="error" @click="openCancelModal(selectedOffer.id)">
+              <template #icon><n-icon><i class="material-icons">delete</i></n-icon></template>
+              Anulează ofertă
+            </n-button>
+            <n-button @click="showModal = false">Închide</n-button>
+          </template>
+          <template v-else>
+            <n-button @click="showModal = false">Închide</n-button>
+          </template>
         </div>
       </template>
-    </va-modal>
+    </n-modal>
 
-    <va-modal v-model="showCancelModal" size="small" title="Confirmare Anulare" hide-default-actions>
-      <div class="text-center my-3">
-        <va-icon name="warning" color="danger" size="large" class="mb-3" />
-        <p class="text-base font-bold mb-2">Sigur dorești să anulezi această ofertă?</p>
-        <p class="text-sm text--secondary">Odată anulată, oferta va fi ștearsă din sistem și vei putea trimite o nouă ofertă pentru acest spațiu.</p>
+    <n-modal v-model:show="showCancelModal" title="Confirmare Anulare" preset="card" style="width: 450px;">
+      <div style="text-align: center; padding: 12px 0;">
+        <i class="material-icons" style="font-size: 48px; color: #ef4444; margin-bottom: 12px;">warning</i>
+        <p style="font-weight: bold; font-size: 1.1rem; color: #f1f5f9; margin-bottom: 8px;">Sigur dorești să anulezi această ofertă?</p>
+        <p style="font-size: 0.9rem; color: #94a3b8;">Odată anulată, oferta va fi ștearsă din sistem și vei putea trimite o nouă ofertă pentru acest spațiu.</p>
       </div>
       <template #footer>
-        <div class="flex justify-center w-full gap-3 mt-3">
-          <va-button preset="secondary" color="secondary" @click="showCancelModal = false">Înapoi</va-button>
-          <va-button color="danger" icon="delete" :loading="cancelling" @click="confirmCancel">Da, anulează oferta</va-button>
+        <div style="display: flex; justify-content: center; gap: 12px; width: 100%;">
+          <n-button secondary @click="showCancelModal = false">Înapoi</n-button>
+          <n-button type="error" :loading="cancelling" @click="confirmCancel">
+            <template #icon><n-icon><i class="material-icons">delete</i></n-icon></template>
+            Da, anulează oferta
+          </n-button>
         </div>
       </template>
-    </va-modal>
+    </n-modal>
   </div>
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, h } from 'vue';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
-import { useToast } from 'vuestic-ui';
+import { useMessage, NCard, NDataTable, NButton, NModal, NTag, NSpin, NIcon } from 'naive-ui';
 import api from '../../services/api';
 
 export default {
   name: 'MyOffers',
+  components: { NCard, NDataTable, NButton, NModal, NTag, NSpin, NIcon },
   setup() {
     const offers = ref([]);
     const loading = ref(false);
@@ -111,14 +83,27 @@ export default {
     const offerToCancelId = ref(null);
     const cancelling = ref(false);
     const selectedOffer = ref(null);
+    const message = useMessage();
+    const store = useStore();
+    const router = useRouter();
 
     const cols = [
-      { key: 'image', label: 'Imagine' },
-      { key: 'property_title', label: 'Spațiu' },
-      { key: 'created_at', label: 'Data ofertei' },
-      { key: 'status', label: 'Status' },
-      { key: 'offer_price', label: 'Preț Ofertat' },
-      { key: 'actions', label: '' }
+      { key: 'image', title: 'Imagine', width: 80, render(row) { return h('img', { src: getImageUrl(row.image_path), style: 'width: 60px; height: 40px; object-fit: cover; border-radius: 4px; display: block;' }); } },
+      { key: 'property_title', title: 'Spațiu' },
+      { key: 'created_at', title: 'Data ofertei' },
+      { key: 'status', title: 'Status', render(row) {
+        const typeMap = { PENDING: 'warning', REJECTED: 'error', ACCEPTED: 'success', SENT: 'info' };
+        const labelMap = { PENDING: 'În așteptare', REJECTED: 'Ofertă refuzată', ACCEPTED: 'Ofertă acceptată', SENT: 'Ofertă primită' };
+        return h(NTag, { type: typeMap[row.status] || 'default', size: 'small' }, { default: () => labelMap[row.status] || row.status });
+      }},
+      { key: 'actions', title: 'Acțiuni', width: 220, render(row) {
+        return h('div', { style: 'display: flex; gap: 10px; align-items: center;' }, [
+          h(NButton, { size: 'small', secondary: true, onClick: () => viewDetails(row) }, { default: () => 'Vezi ofertă', icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'visibility') }) }),
+          ...(row.status === 'PENDING' ? [
+            h(NButton, { size: 'small', type: 'error', secondary: true, onClick: () => openCancelModal(row.id) }, { default: () => 'Anulează', icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'delete') }) })
+          ] : [])
+        ]);
+      }}
     ];
 
     const load = async () => {
@@ -142,51 +127,46 @@ export default {
     };
 
     const parsedDetails = (detailsStr) => {
-      if (!detailsStr) return null;
-      try {
-        const obj = JSON.parse(detailsStr);
-        if (obj && typeof obj === 'object') {
-          return obj;
-        }
-        return null;
-      } catch(e) {
-        return null;
+      let obj = {};
+      if (detailsStr) {
+        try {
+          const parsed = JSON.parse(detailsStr);
+          if (parsed && typeof parsed === 'object') obj = parsed;
+        } catch(e) {}
       }
+      if (selectedOffer.value && (obj.deposit_eur === undefined || obj.deposit_eur === null)) {
+        const price = selectedOffer.value.offer_price || selectedOffer.value.property_price || 0;
+        obj.deposit_eur = price * 2;
+      }
+      return obj;
     };
-
-    const { init } = useToast();
-    const store = useStore();
-    const router = useRouter();
 
     const acceptOffer = async (id) => {
       try {
         const res = await api.patch(`/offers/${id}/accept`);
         
-        // Update user session if token is provided
         if (res.data.token && res.data.user) {
           store.commit("auth_success", { token: res.data.token, user: res.data.user });
           localStorage.setItem("token", res.data.token);
           localStorage.setItem("user", JSON.stringify(res.data.user));
         }
 
-        init({ message: 'Felicitări! Ai acceptat oferta și ești acum chiriaș.', color: 'success' });
+        message.success('Felicitări! Ai acceptat oferta și ești acum chiriaș.');
         showModal.value = false;
-        
-        // Redirect to dashboard to see the new layout and features
         router.push('/app/dashboard');
       } catch (err) {
-        init({ message: err.response?.data?.message || 'Eroare la acceptarea ofertei.', color: 'danger' });
+        message.error(err.response?.data?.message || 'Eroare la acceptarea ofertei.');
       }
     };
 
     const rejectOffer = async (id) => {
       try {
         await api.patch(`/offers/${id}/reject`);
-        init({ message: 'Oferta a fost refuzată.', color: 'success' });
+        message.success('Oferta a fost refuzată.');
         showModal.value = false;
         load();
       } catch (err) {
-        init({ message: err.response?.data?.message || 'Eroare la refuzarea ofertei.', color: 'danger' });
+        message.error(err.response?.data?.message || 'Eroare la refuzarea ofertei.');
       }
     };
 
@@ -200,12 +180,12 @@ export default {
       cancelling.value = true;
       try {
         await api.delete(`/offers/${offerToCancelId.value}`);
-        init({ message: 'Oferta a fost anulată cu succes.', color: 'success' });
+        message.success('Oferta a fost anulată cu succes.');
         showCancelModal.value = false;
         showModal.value = false;
         load();
       } catch (err) {
-        init({ message: err.response?.data?.message || 'Eroare la anularea ofertei.', color: 'danger' });
+        message.error(err.response?.data?.message || 'Eroare la anularea ofertei.');
       } finally {
         cancelling.value = false;
       }

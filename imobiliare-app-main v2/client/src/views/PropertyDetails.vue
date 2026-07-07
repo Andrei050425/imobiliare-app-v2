@@ -1,20 +1,21 @@
 <template>
-  <div v-if="loading" class="text-center mt-5">
-    <va-progress-circle indeterminate />
+  <div v-if="loading" class="text-center mt-5" style="padding: 40px; display: flex; justify-content: center;">
+    <n-spin size="large" />
   </div>
 
-  <div v-else-if="!property" class="text-center mt-5">
+  <div v-else-if="!property" class="text-center mt-5" style="padding: 40px; text-align: center;">
     <h3>Anunțul nu a fost găsit.</h3>
-    <va-button to="/">Înapoi la oferte</va-button>
+    <n-button @click="$router.push('/')" style="margin-top: 12px;">Înapoi la oferte</n-button>
   </div>
 
-  <div v-else class="row justify-center pb-4">
-    <div class="flex xs12 lg10">
-      <va-button preset="secondary" icon="arrow_back" @click="$router.back()" class="mb-3">
+  <div v-else class="row justify-center pb-4" style="max-width: 1200px; margin: 0 auto;">
+    <div style="width: 100%;">
+      <n-button secondary @click="$router.back()" style="margin-bottom: 16px;">
+        <template #icon><n-icon><i class="material-icons">arrow_back</i></n-icon></template>
         Înapoi
-      </va-button>
+      </n-button>
 
-      <va-card>
+      <n-card :bordered="true" content-style="padding: 0;">
         <!-- GALERIE FOTO INTERACTIVĂ -->
         <div class="property-gallery-wrapper">
           <div class="main-image-container">
@@ -26,15 +27,15 @@
             
             <div v-if="property.images && property.images.length > 1" class="gallery-nav-arrows">
               <button class="nav-arrow left-arrow" @click.stop="prevImg" title="Imaginea anterioară">
-                <va-icon name="chevron_left" />
+                <i class="material-icons">chevron_left</i>
               </button>
               <button class="nav-arrow right-arrow" @click.stop="nextImg" title="Imaginea următoare">
-                <va-icon name="chevron_right" />
+                <i class="material-icons">chevron_right</i>
               </button>
             </div>
 
             <div v-if="property.images && property.images.length > 1" class="gallery-counter">
-              <va-icon name="photo_camera" size="small" class="mr-1" />
+              <i class="material-icons" style="font-size: 16px; margin-right: 4px;">photo_camera</i>
               <span>{{ (currentImgIdx || 0) + 1 }} / {{ property.images.length }}</span>
             </div>
           </div>
@@ -52,149 +53,162 @@
           </div>
         </div>
 
-        <va-card-content>
-          <div class="row">
-            <div class="flex xs12 md8">
-              <h1 class="display-2 mb-2">{{ property.title }}</h1>
+        <div style="padding: 24px;">
+          <div class="row" style="display: flex; flex-wrap: wrap; gap: 24px;">
+            <div style="flex: 1; min-width: 300px;">
+              <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 8px; color: #f1f5f9;">{{ property.title }}</h1>
               
-              <div class="mb-4">
-                 <va-chip color="info" class="mr-2">{{ property.category_name }}</va-chip>
-                 <span class="text--secondary"><va-icon name="location_on" size="small"/> {{ property.address }}</span>
+              <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                 <n-tag type="info">{{ property.category_name }}</n-tag>
+                 <span style="color: #94a3b8; display: flex; align-items: center; gap: 4px;">
+                   <i class="material-icons" style="font-size: 18px;">location_on</i> {{ property.address }}
+                 </span>
               </div>
 
-              <h3 class="mt-4">Descriere</h3>
-              <p style="white-space: pre-line;">{{ property.description }}</p>
+              <h3 style="margin-top: 24px; font-size: 1.3rem; color: #f1f5f9;">Descriere</h3>
+              <p style="white-space: pre-line; color: #cbd5e1; line-height: 1.6;">{{ property.description }}</p>
 
               <!-- Harta de Localizare -->
-              <div v-if="property.latitude && property.longitude" class="mt-5">
-                <h3 class="mb-3 d-flex align-center gap-2">
-                  <va-icon name="map" color="primary" /> Localizare pe hartă
+              <div v-if="property.latitude && property.longitude" style="margin-top: 32px;">
+                <h3 style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: #f1f5f9;">
+                  <i class="material-icons" style="color: #6366f1;">map</i> Localizare pe hartă
                 </h3>
-                <div style="height: 380px; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0;">
+                <div style="height: 380px; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.1);">
                   <PropertyMap :properties="[property]" :simple-pin="true" />
                 </div>
               </div>
             </div>
 
-            <div class="flex xs12 md4">
-              <va-card color="background-element" class="mt-3 md-mt-0">
-                <va-card-content>
-                  <div class="display-6 text-primary mb-3 text-center">
-                    {{ property.price }} EUR
+            <div style="width: 320px; flex-shrink: 0;">
+              <n-card :bordered="true" style="background: rgba(255, 255, 255, 0.03);">
+                <div style="font-size: 1.8rem; font-weight: 800; color: #6366f1; text-align: center; margin-bottom: 16px;">
+                  {{ property.price }} EUR <span style="font-size: 0.9rem; font-weight: normal; color: #94a3b8;">/ lună</span>
+                </div>
+                
+                <n-divider />
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px;">
+                  <div style="text-align: center;">
+                    <i class="material-icons" style="font-size: 24px; color: #94a3b8;">square_foot</i>
+                    <div style="font-weight: bold; color: #f1f5f9; margin-top: 4px;">{{ property.area }} mp</div>
                   </div>
-                  
-                  <va-divider />
-                  
-                  <div class="row mt-3">
-                    <div class="flex xs6 text-center">
-                      <va-icon name="square_foot" color="secondary" />
-                      <div class="text--bold">{{ property.area }} mp</div>
-                    </div>
-                    <div class="flex xs6 text-center">
-                      <va-icon name="person" color="secondary" />
-                      <div>{{ property.owner_name || 'Proprietar' }}</div>
-                    </div>
+                  <div style="text-align: center;">
+                    <i class="material-icons" style="font-size: 24px; color: #94a3b8;">person</i>
+                    <div style="color: #f1f5f9; margin-top: 4px;">{{ property.owner_name || 'Proprietar' }}</div>
                   </div>
+                </div>
 
-                  <div class="mt-4" v-if="isAdmin">
-                    <va-button block color="primary" icon="edit" @click="$router.push(`/app/properties/edit/${property.id}`)">
-                      Editează Spațiul
-                    </va-button>
-                  </div>
-                  <div class="mt-4" v-else-if="property.status === 'FREE'">
-                    <div v-if="myActiveOffer" class="text-center">
-                      <va-alert color="warning" outline class="text-center w-full mb-3 text-sm">
-                        <va-icon name="info" class="mr-1" />
-                        Ai deja o ofertă trimisă pentru acest spațiu. Odată ce a fost trimisă oferta nu mai poți trimite alta până nu o anulezi pe cea transmisă înainte.
-                      </va-alert>
-                      <va-button block color="warning" preset="secondary" icon="visibility" @click="$router.push('/app/my-offers')">
-                        Vezi / Anulează în „Ofertele mele”
-                      </va-button>
+                <div style="margin-top: 24px;" v-if="isAdmin">
+                  <n-button block type="primary" @click="$router.push(`/app/properties/edit/${property.id}`)">
+                    <template #icon><n-icon><i class="material-icons">edit</i></n-icon></template>
+                    Editează Spațiul
+                  </n-button>
+                </div>
+                <div style="margin-top: 24px;" v-else-if="property.status === 'FREE'">
+                  <div v-if="myActiveOffer" style="text-align: left;">
+                    <n-alert type="success" :bordered="true" title="Ofertă trimisă" style="margin-bottom: 16px;">
+                      Ai trimis deja o ofertă pentru acest spațiu, aflată în curs de evaluare.
+                    </n-alert>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                      <n-button block type="primary" secondary @click="$router.push('/app/my-offers')">
+                        <template #icon><n-icon><i class="material-icons">visibility</i></n-icon></template>
+                        Vezi în „Ofertele mele”
+                      </n-button>
+                      <n-button block type="warning" secondary @click="showDuplicateOfferModal = true">
+                        <template #icon><n-icon><i class="material-icons">add_circle_outline</i></n-icon></template>
+                        Trimite o altă ofertă
+                      </n-button>
                     </div>
-                    <va-button v-else block color="primary" icon="send" @click="openOfferModal">
-                      Trimite ofertă
-                    </va-button>
                   </div>
-                  <div class="mt-4" v-else-if="isMyRentedSpace">
-                    <va-alert color="success" outline class="text-center w-full">
-                      <va-icon name="check_circle" class="mr-1" />
-                      Spațiu închiriat de tine
-                    </va-alert>
-                  </div>
-                  <div class="mt-4" v-else>
-                    <va-alert color="info" outline class="text-center w-full">
-                      Acest spațiu nu mai este disponibil pentru închiriere.
-                    </va-alert>
-                  </div>
-                </va-card-content>
-              </va-card>
+                  <n-button v-else block type="primary" @click="openOfferModal">
+                    <template #icon><n-icon><i class="material-icons">send</i></n-icon></template>
+                    Trimite ofertă
+                  </n-button>
+                </div>
+                <div style="margin-top: 24px;" v-else-if="isMyRentedSpace">
+                  <n-alert type="success" :bordered="true">
+                    Spațiu închiriat de tine
+                  </n-alert>
+                </div>
+                <div style="margin-top: 24px;" v-else>
+                  <n-alert type="info" :bordered="true">
+                    Acest spațiu nu mai este disponibil pentru închiriere.
+                  </n-alert>
+                </div>
+              </n-card>
             </div>
           </div>
-        </va-card-content>
-      </va-card>
+        </div>
+      </n-card>
     </div>
 
     <!-- MODAL TRIMITE OFERTĂ -->
-    <va-modal v-model="showOfferModal" title="Trimite Ofertă de Închiriere" hide-default-actions>
-      <div v-if="property" class="modal-form py-2" style="min-width: 320px; max-width: 520px;">
-        <div class="mb-3 p-3 rounded" style="background-color: var(--va-background-element); border-left: 4px solid var(--va-primary);">
-          <div class="text--bold">{{ property.title }}</div>
-          <div class="text--secondary text-sm">Preț catalog: <strong>{{ property.price }} EUR / lună</strong></div>
+    <n-modal v-model:show="showOfferModal" title="Trimite Ofertă de Închiriere" preset="card" style="width: 520px;">
+      <div v-if="property" style="padding: 8px 0;">
+        <div style="margin-bottom: 16px; padding: 12px; border-radius: 8px; background: rgba(99, 102, 241, 0.1); border-left: 4px solid #6366f1;">
+          <div style="font-weight: bold; color: #f1f5f9;">{{ property.title }}</div>
+          <div style="color: #94a3b8; font-size: 0.9rem;">Preț catalog: <strong style="color: #10b981;">{{ property.price }} EUR / lună</strong></div>
         </div>
 
-        <div class="row mb-3">
-          <div class="flex xs12 sm6 pr-sm-2 mb-2 sm-mb-0">
-            <va-input 
-              v-model="offerForm.start_date" 
-              type="date" 
-              label="Data început contract" 
-              bordered
-            />
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 4px;">Data început contract</label>
+            <n-input v-model:value="offerForm.start_date" type="date" />
           </div>
-          <div class="flex xs12 sm6 pl-sm-2">
-            <va-input 
-              v-model="offerForm.end_date" 
-              type="date" 
-              label="Data sfârșit (alegi câți ani dorești)" 
-              bordered
-            />
+          <div>
+            <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 4px;">Data sfârșit contract</label>
+            <n-input v-model:value="offerForm.end_date" type="date" />
           </div>
         </div>
 
-        <div class="mb-3">
-          <va-input 
-            v-model.number="offerForm.price" 
-            type="number" 
-            label="Contraofertă Chirie Lunară (EUR)" 
-            bordered
-          >
-            <template #prependInner>
-              <va-icon name="euro" size="small" color="secondary" />
-            </template>
-          </va-input>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 4px;">Contraofertă Chirie Lunară (EUR)</label>
+            <n-input-number v-model:value="offerForm.price" :min="0" style="width: 100%;">
+              <template #suffix>EUR</template>
+            </n-input-number>
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 4px;">Garanție propusă (EUR)</label>
+            <n-input-number v-model:value="offerForm.deposit_eur" :min="0" :disabled="true" :show-button="false" style="width: 100%;">
+              <template #suffix>EUR</template>
+            </n-input-number>
+          </div>
         </div>
 
-        <div class="mb-4">
-          <va-input 
-            v-model="offerForm.details" 
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 4px;">Mesaj / Observații suplimentare (opțional)</label>
+          <n-input 
+            v-model:value="offerForm.details" 
             type="textarea" 
-            label="Mesaj / Observații suplimentare (opțional)" 
-            :min-rows="3" 
-            bordered 
+            :rows="3" 
             placeholder="Menționează orice cerință specială sau detaliu despre oferta ta..."
           />
         </div>
 
-        <div class="d-flex justify-end gap-2 mt-4">
-          <va-button preset="secondary" color="secondary" @click="showOfferModal = false">
-            Anulează
-          </va-button>
-          <va-button color="primary" icon="send" :loading="sendingOffer" @click="submitOffer">
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+          <n-button secondary @click="showOfferModal = false">Anulează</n-button>
+          <n-button type="primary" :loading="sendingOffer" @click="submitOffer">
+            <template #icon><n-icon><i class="material-icons">send</i></n-icon></template>
             Trimite Oferta
-          </va-button>
+          </n-button>
         </div>
       </div>
-    </va-modal>
+    </n-modal>
+
+    <!-- MODAL AVERTIZARE OFERTĂ EXISTENTĂ -->
+    <n-modal v-model:show="showDuplicateOfferModal" preset="card" style="width: 460px; background: #1e1e2e; border: 1px solid rgba(245, 158, 11, 0.4);">
+      <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; border-radius: 8px; padding: 16px; margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-start;">
+        <i class="material-icons" style="color: #f59e0b; font-size: 24px; flex-shrink: 0; margin-top: 2px;">error</i>
+        <div style="color: #fdd835; font-size: 0.98rem; line-height: 1.5; font-weight: 500;">
+          Ai deja o ofertă trimisă pentru acest spațiu. Nu mai poți trimite alta până nu o anulezi pe cea transmisă anterior.
+        </div>
+      </div>
+      <n-button block type="warning" secondary style="background: rgba(245, 158, 11, 0.1); border-color: #f59e0b; color: #f59e0b; font-weight: 600; height: 44px; font-size: 1rem;" @click="showDuplicateOfferModal = false; $router.push('/app/my-offers')">
+        <template #icon><n-icon><i class="material-icons">visibility</i></n-icon></template>
+        Vezi în „Ofertele mele”
+      </n-button>
+    </n-modal>
   </div>
 </template>
 
@@ -202,17 +216,18 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
-import { useToast } from 'vuestic-ui';
+import { useMessage, NCard, NButton, NIcon, NSpin, NTag, NDivider, NAlert, NModal, NInput, NInputNumber } from 'naive-ui';
 import api from '../services/api';
 import PropertyMap from '../components/PropertyMap.vue';
 
 export default {
-  components: { PropertyMap },
+  name: 'PropertyDetails',
+  components: { NCard, NButton, NIcon, NSpin, NTag, NDivider, NAlert, NModal, NInput, NInputNumber, PropertyMap },
   setup() {
     const route = useRoute();
     const router = useRouter();
     const store = useStore();
-    const { init: notify } = useToast();
+    const message = useMessage();
     
     const isAdmin = computed(() => store.getters.isAdmin);
     const property = ref(null);
@@ -234,7 +249,6 @@ export default {
     const fetchProperty = async () => {
       try {
         currentImgIdx.value = 0;
-        // Luam ID-ul din URL (ex: /property/5)
         const id = route.params.id;
         const res = await api.get(`/properties/${id}`);
         property.value = res.data;
@@ -256,7 +270,7 @@ export default {
         }
       } catch (err) {
         console.error(err);
-        notify({ message: 'Nu am putut încărca anunțul', color: 'danger' });
+        message.error('Nu am putut încărca anunțul');
       } finally {
         loading.value = false;
       }
@@ -269,11 +283,13 @@ export default {
     };
 
     const showOfferModal = ref(false);
+    const showDuplicateOfferModal = ref(false);
     const sendingOffer = ref(false);
     const offerForm = ref({
       start_date: '',
       end_date: '',
       price: 0,
+      deposit_eur: 0,
       details: ''
     });
 
@@ -287,10 +303,20 @@ export default {
       }
     });
 
+    watch(() => offerForm.value.price, (newPrice) => {
+      if (newPrice !== undefined && newPrice !== null) {
+        offerForm.value.deposit_eur = Number(newPrice) * 2;
+      }
+    });
+
     const openOfferModal = () => {
       if (!store.getters.isLoggedIn) {
-        notify({ message: 'Trebuie să te loghezi pentru a trimite o ofertă.', color: 'warning' });
+        message.warning('Trebuie să te loghezi pentru a trimite o ofertă.');
         router.push('/login');
+        return;
+      }
+      if (myActiveOffer.value) {
+        showDuplicateOfferModal.value = true;
         return;
       }
       
@@ -300,10 +326,12 @@ export default {
       nextYear.setFullYear(nextYear.getFullYear() + 1);
       const endDateStr = nextYear.toISOString().split('T')[0];
 
+      const defaultPrice = property.value?.price || 0;
       offerForm.value = {
         start_date: startDateStr,
         end_date: endDateStr,
-        price: property.value?.price || 0,
+        price: defaultPrice,
+        deposit_eur: defaultPrice * 2,
         details: ''
       };
       showOfferModal.value = true;
@@ -311,11 +339,11 @@ export default {
 
     const submitOffer = async () => {
       if (!offerForm.value.start_date || !offerForm.value.end_date) {
-        notify({ message: 'Te rugăm să selectezi perioada de valabilitate a contractului.', color: 'warning' });
+        message.warning('Te rugăm să selectezi perioada de valabilitate a contractului.');
         return;
       }
       if (!offerForm.value.price || offerForm.value.price <= 0) {
-        notify({ message: 'Te rugăm să introduci o chirie lunară validă.', color: 'warning' });
+        message.warning('Te rugăm să introduci o chirie lunară validă.');
         return;
       }
 
@@ -324,6 +352,7 @@ export default {
         const detailsObj = {
           start_date: offerForm.value.start_date,
           end_date: offerForm.value.end_date,
+          deposit_eur: Number(offerForm.value.deposit_eur || 0),
           message: offerForm.value.details
         };
 
@@ -333,12 +362,12 @@ export default {
           offer_details: JSON.stringify(detailsObj)
         });
         
-        notify({ message: 'Oferta ta a fost trimisă cu succes către administrator!', color: 'success' });
+        message.success('Oferta ta a fost trimisă cu succes către administrator!');
         showOfferModal.value = false;
         fetchProperty();
       } catch (err) {
         const msg = err.response?.data?.error || err.response?.data?.message || err.message;
-        notify({ message: `A apărut o eroare: ${msg}`, color: 'danger' });
+        message.error(`A apărut o eroare: ${msg}`);
       } finally {
         sendingOffer.value = false;
       }
@@ -371,16 +400,16 @@ export default {
 
     return { 
       property, loading, getImageUrl, isAdmin, currentImgIdx, nextImg, prevImg, isMyRentedSpace,
-      showOfferModal, sendingOffer, offerForm, openOfferModal, submitOffer, myActiveOffer
+      showOfferModal, showDuplicateOfferModal, sendingOffer, offerForm, openOfferModal, submitOffer, myActiveOffer
     };
   }
-}
+};
 </script>
 
 <style scoped>
 .property-gallery-wrapper {
   position: relative;
-  background: #ffffff;
+  background: #18181c;
   border-radius: 12px 12px 0 0;
   overflow: hidden;
 }
@@ -415,8 +444,8 @@ export default {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-  border: none;
+  background: rgba(30, 30, 46, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -424,17 +453,18 @@ export default {
   pointer-events: auto;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   transition: all 0.2s ease;
-  color: #1e293b;
+  color: #f1f5f9;
 }
 .nav-arrow:hover {
-  background: #ffffff;
+  background: #6366f1;
+  border-color: #6366f1;
   transform: scale(1.1);
 }
 .gallery-counter {
   position: absolute;
   bottom: 16px;
   right: 16px;
-  background: rgba(15, 23, 42, 0.8);
+  background: rgba(15, 23, 42, 0.85);
   color: #ffffff;
   padding: 6px 14px;
   border-radius: 20px;
@@ -449,10 +479,9 @@ export default {
   display: flex;
   gap: 12px;
   padding: 16px 20px;
-  background: #f8fafc;
+  background: #1e1e2e;
   overflow-x: auto;
-  border-top: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 .thumb-item {
   width: 96px;
@@ -463,18 +492,16 @@ export default {
   opacity: 0.65;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  border: 2px solid #cbd5e1;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 2px solid transparent;
 }
 .thumb-item:hover {
   opacity: 0.95;
-  border-color: #94a3b8;
 }
 .thumb-item.active-thumb {
   opacity: 1;
-  border-color: #2563eb;
+  border-color: #6366f1;
   transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 .thumb-img {
   width: 100%;

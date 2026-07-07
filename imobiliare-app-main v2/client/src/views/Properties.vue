@@ -2,214 +2,154 @@
   <div>
     <div class="page-title">Spații comerciale</div>
     <div class="toolbar">
-      <va-input v-model="search" placeholder="Caută spațiu..." clearable @clear="load" @update:modelValue="val => { if (!val) load(); }" @keyup.enter="load">
-        <template #prependInner><va-icon name="search" /></template>
-      </va-input>
-      <va-select v-model="statusFilter" :options="statusOptions" text-by="label" value-by="value" placeholder="Toate stările" clearable @update:modelValue="load" />
+      <n-input v-model:value="search" placeholder="Caută spațiu..." clearable @clear="load" @keyup.enter="load" style="max-width: 300px;">
+        <template #prefix><n-icon><i class="material-icons" style="font-size:16px">search</i></n-icon></template>
+      </n-input>
+      <n-select v-model:value="statusFilter" :options="statusOptions" placeholder="Toate stările" clearable @update:value="load" style="width: 180px;" />
       <span class="spacer"></span>
-      <va-button v-if="isAdmin" icon="add" @click="$router.push('/app/properties/add')">Spațiu nou</va-button>
+      <n-button v-if="isAdmin" type="primary" @click="$router.push('/app/properties/add')">
+        <template #icon><n-icon><i class="material-icons">add</i></n-icon></template>
+        Spațiu nou
+      </n-button>
     </div>
 
-    <va-card>
-      <va-card-content>
-        <va-data-table :items="items" :columns="cols" :loading="loading">
-          <template #cell(image)="{ row }">
-            <img :src="getImageUrl(row.source.image_path)" style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px; display: block;" />
-          </template>
-          <template #cell(area)="{ value }">{{ value }} mp</template>
-          <template #cell(price)="{ value }">{{ value }} €</template>
-          <template #cell(status)="{ value }"><va-badge :color="ST[value]?.color" :text="ST[value]?.label || value" /></template>
-          <template #cell(actions)="{ row }">
-            <va-button preset="plain" icon="visibility" title="Vezi detalii & chiriaș" @click="openDetailsModal(row.source)" />
-            <va-button preset="plain" icon="map" title="Vezi pe hartă" @click="openMapModal(row.source)" />
-            <va-button preset="plain" icon="edit" title="Editează spațiu" @click="$router.push(`/app/properties/edit/${row.source.id}`)" />
-            <va-button v-if="isAdmin" preset="plain" color="danger" icon="delete" title="Șterge spațiu" @click="remove(row.source.id)" />
-          </template>
-        </va-data-table>
-      </va-card-content>
-    </va-card>
+    <n-card>
+      <n-data-table :columns="columns" :data="items" :loading="loading" :bordered="false" />
+    </n-card>
 
     <!-- Modal Localizare Hartă -->
-    <va-modal v-model="showMapModal" :title="`Localizare pe hartă: ${selectedProperty?.title || ''}`" size="large" hide-default-actions>
-      <div v-if="selectedProperty" style="height: 450px; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0;">
+    <n-modal v-model:show="showMapModal" :title="`Localizare pe hartă: ${selectedProperty?.title || ''}`" preset="card" style="width: 800px;">
+      <div v-if="selectedProperty" style="height: 450px; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
         <PropertyMap :properties="[selectedProperty]" @select-property="showMapModal = false" />
       </div>
       <template #footer>
-        <va-button preset="secondary" @click="showMapModal = false">Închide</va-button>
+        <n-button @click="showMapModal = false">Închide</n-button>
       </template>
-    </va-modal>
+    </n-modal>
 
     <!-- Modal Detalii Spațiu & Chiriaș/Rezervare -->
-    <va-modal v-model="showDetailsModal" title="Fișă Tehnică & Detalii Ocupare" size="large" hide-default-actions>
-      <div v-if="loadingDetails" class="d-flex justify-center align-center py-5">
-        <va-progress-circle indeterminate color="primary" />
-        <span class="ml-3 text--secondary">Se încarcă detaliile spațiului și ale chiriașului...</span>
+    <n-modal v-model:show="showDetailsModal" title="Fișă Tehnică & Detalii Ocupare" preset="card" style="width: 900px;">
+      <div v-if="loadingDetails" style="display: flex; justify-content: center; align-items: center; padding: 40px;">
+        <n-spin size="medium" />
+        <span style="margin-left: 12px; color: #94a3b8;">Se încarcă detaliile spațiului și ale chiriașului...</span>
       </div>
 
       <div v-else-if="detailsData" class="property-details-view">
         <!-- HEADER SPAȚIU -->
-        <div class="details-header mb-4 p-3 bg-light rounded d-flex justify-space-between align-center">
+        <div class="details-header">
           <div>
-            <h3 class="m-0 text-primary d-flex align-center gap-2">
-              {{ detailsData.title }}
-            </h3>
-            <span class="text--secondary text-sm"><va-icon name="place" size="small" /> {{ detailsData.address }}, {{ detailsData.sector }}</span>
+            <h3 style="margin: 0; color: #6366f1;">{{ detailsData.title }}</h3>
+            <span style="color: #94a3b8; font-size: 0.85rem;"><i class="material-icons" style="font-size: 14px; vertical-align: middle;">place</i> {{ detailsData.address }}, {{ detailsData.sector }}</span>
           </div>
           <div>
-            <va-badge :color="ST[detailsData.status]?.color" :text="ST[detailsData.status]?.label || detailsData.status" size="large" />
+            <n-tag :type="ST[detailsData.status]?.naiveType || 'default'" size="medium">{{ ST[detailsData.status]?.label || detailsData.status }}</n-tag>
           </div>
         </div>
 
         <div class="details-split-grid" :class="{ 'single-column': !(detailsData.status === 'OCCUPIED' || detailsData.status === 'RESERVED') }">
-          <!-- COLOANA STÂNGĂ / SUS: DETALII SPAȚIU COMERCIAL -->
+          <!-- COLOANA STÂNGĂ: DETALII SPAȚIU -->
           <div class="detail-card space-card">
             <div class="card-title-header space-title">
-              <va-icon name="storefront" color="primary" /> Specificații Spațiu Comercial
+              <i class="material-icons" style="color: #6366f1;">storefront</i> Specificații Spațiu Comercial
             </div>
             
-            <div v-if="detailsData.images && detailsData.images.length > 0" class="mb-4 rounded-lg overflow-hidden border shadow-sm">
+            <div v-if="detailsData.images && detailsData.images.length > 0" style="margin-bottom: 16px; border-radius: 8px; overflow: hidden;">
               <div style="position: relative; height: 220px; background: #1e293b;">
                 <img :src="getImageUrl(detailsData.images[detailsImgIdx || 0].path)" style="width: 100%; height: 220px; object-fit: cover; display: block;" />
                 <div v-if="detailsData.images.length > 1" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 8px; pointer-events: none;">
                   <button @click.stop="detailsImgIdx = (detailsImgIdx - 1 + detailsData.images.length) % detailsData.images.length" style="pointer-events: auto; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.85); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #1e293b;">
-                    <va-icon name="chevron_left" size="small" />
+                    <i class="material-icons" style="font-size: 18px;">chevron_left</i>
                   </button>
                   <button @click.stop="detailsImgIdx = (detailsImgIdx + 1) % detailsData.images.length" style="pointer-events: auto; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.85); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #1e293b;">
-                    <va-icon name="chevron_right" size="small" />
+                    <i class="material-icons" style="font-size: 18px;">chevron_right</i>
                   </button>
                 </div>
                 <div v-if="detailsData.images.length > 1" style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.75); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
                   {{ (detailsImgIdx || 0) + 1 }} / {{ detailsData.images.length }}
                 </div>
               </div>
-              <div v-if="detailsData.images.length > 1" style="display: flex; gap: 6px; padding: 8px; background: #f8fafc; overflow-x: auto; border-top: 1px solid #e2e8f0;">
-                <div v-for="(img, idx) in detailsData.images" :key="idx" @click="detailsImgIdx = idx" style="width: 50px; height: 36px; border-radius: 4px; overflow: hidden; cursor: pointer; flex-shrink: 0; border: 2px solid transparent; transition: all 0.2s;" :style="{ borderColor: idx === (detailsImgIdx || 0) ? '#3b82f6' : 'transparent', opacity: idx === (detailsImgIdx || 0) ? 1 : 0.6 }">
-                  <img :src="getImageUrl(img.path)" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
-                </div>
-              </div>
             </div>
 
-            <div class="info-grid mt-2">
-              <div class="info-item">
-                <span class="label">Categorie:</span>
-                <span class="value font-bold">{{ detailsData.category_name }}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">Preț lunar:</span>
-                <span class="value text-primary font-bold text-md">{{ detailsData.price }} € / lună</span>
-              </div>
-              <div class="info-item">
-                <span class="label">Suprafață:</span>
-                <span class="value font-bold">{{ detailsData.area }} mp</span>
-              </div>
-              <div class="info-item">
-                <span class="label">Preț / mp:</span>
-                <span class="value font-bold">{{ (detailsData.price / (detailsData.area || 1)).toFixed(2) }} €/mp</span>
-              </div>
+            <div class="info-grid">
+              <div class="info-item"><span class="label">Categorie:</span><span class="value font-bold">{{ detailsData.category_name }}</span></div>
+              <div class="info-item"><span class="label">Preț lunar:</span><span class="value font-bold" style="color: #6366f1;">{{ detailsData.price }} € / lună</span></div>
+              <div class="info-item"><span class="label">Suprafață:</span><span class="value font-bold">{{ detailsData.area }} mp</span></div>
+              <div class="info-item"><span class="label">Preț / mp:</span><span class="value font-bold">{{ (detailsData.price / (detailsData.area || 1)).toFixed(2) }} €/mp</span></div>
             </div>
 
-            <div class="mt-4 pt-3 border-top">
-              <span class="label d-block mb-1">Descriere:</span>
-              <p class="text-sm text--secondary m-0" style="white-space: pre-line; max-height: 140px; overflow-y: auto; line-height: 1.5;">{{ detailsData.description || 'Fără descriere.' }}</p>
+            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08);">
+              <span class="label" style="display: block; margin-bottom: 4px;">Descriere:</span>
+              <p style="font-size: 0.85rem; color: #94a3b8; margin: 0; white-space: pre-line; max-height: 140px; overflow-y: auto; line-height: 1.5;">{{ detailsData.description || 'Fără descriere.' }}</p>
             </div>
           </div>
 
-          <!-- COLOANA DREAPTĂ / JOS: DETALII PERSOANĂ / CHIRIAȘ (DOAR PENTRU OCUPAT / REZERVAT) -->
+          <!-- COLOANA DREAPTĂ: CHIRIAȘ -->
           <div v-if="detailsData.status === 'OCCUPIED' || detailsData.status === 'RESERVED'" class="detail-card" :class="detailsData.status === 'OCCUPIED' ? 'tenant-card-occupied' : 'tenant-card-reserved'">
             <div class="card-title-header" :class="detailsData.status === 'OCCUPIED' ? 'occupied-title' : 'reserved-title'">
-              <va-icon :name="detailsData.status === 'OCCUPIED' ? 'verified_user' : 'pending_actions'" /> 
+              <i class="material-icons">{{ detailsData.status === 'OCCUPIED' ? 'verified_user' : 'pending_actions' }}</i>
               {{ detailsData.status === 'OCCUPIED' ? 'Informații Chiriaș & Contract' : 'Informații Client & Rezervare' }}
             </div>
 
             <div v-if="detailsData.tenant" class="tenant-info-box">
-              <div class="tenant-header mb-4 p-3 rounded-lg bg-white shadow-sm border">
-                <div class="font-bold text-lg text-dark">{{ detailsData.tenant.tenant_name || detailsData.tenant.company_name || 'Client Nespecificat' }}</div>
-                <div v-if="detailsData.tenant.legal_rep_name" class="text-xs text--secondary mt-1">Reprezentant legal: {{ detailsData.tenant.legal_rep_name }}</div>
+              <div class="tenant-header">
+                <div class="font-bold" style="font-size: 1.1rem;">{{ detailsData.tenant.tenant_name || detailsData.tenant.company_name || 'Client Nespecificat' }}</div>
+                <div v-if="detailsData.tenant.legal_rep_name" style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">Reprezentant legal: {{ detailsData.tenant.legal_rep_name }}</div>
               </div>
 
               <div class="info-grid">
-                <div class="info-item">
-                  <span class="label">Email:</span>
-                  <span class="value">{{ detailsData.tenant.tenant_email || detailsData.tenant.email || '-' }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="label">Telefon:</span>
-                  <span class="value font-bold">{{ detailsData.tenant.tenant_phone || detailsData.tenant.phone || '-' }}</span>
-                </div>
-                <div class="info-item" v-if="detailsData.tenant.cui">
-                  <span class="label">CUI / CIF:</span>
-                  <span class="value">{{ detailsData.tenant.cui }}</span>
-                </div>
-                <div class="info-item" v-if="detailsData.tenant.reg_no">
-                  <span class="label">Nr. Reg. Com.:</span>
-                  <span class="value">{{ detailsData.tenant.reg_no }}</span>
-                </div>
-                <div class="info-item xs12" v-if="detailsData.tenant.tenant_address || detailsData.tenant.address">
-                  <span class="label">Adresă Sediu:</span>
-                  <span class="value text-xs">{{ detailsData.tenant.tenant_address || detailsData.tenant.address }}</span>
-                </div>
+                <div class="info-item"><span class="label">Email:</span><span class="value">{{ detailsData.tenant.tenant_email || detailsData.tenant.email || '-' }}</span></div>
+                <div class="info-item"><span class="label">Telefon:</span><span class="value font-bold">{{ detailsData.tenant.tenant_phone || detailsData.tenant.phone || '-' }}</span></div>
+                <div class="info-item" v-if="detailsData.tenant.cui"><span class="label">CUI / CIF:</span><span class="value">{{ detailsData.tenant.cui }}</span></div>
+                <div class="info-item" v-if="detailsData.tenant.reg_no"><span class="label">Nr. Reg. Com.:</span><span class="value">{{ detailsData.tenant.reg_no }}</span></div>
+                <div class="info-item xs12" v-if="detailsData.tenant.tenant_address || detailsData.tenant.address"><span class="label">Adresă Sediu:</span><span class="value" style="font-size: 0.75rem;">{{ detailsData.tenant.tenant_address || detailsData.tenant.address }}</span></div>
               </div>
 
-              <!-- SECȚIUNE CONTRACT (Dacă există contract) -->
-              <div v-if="detailsData.tenant.contract_number" class="mt-4 pt-3 border-top">
-                <div class="text-xs font-bold text-uppercase text--secondary mb-3 d-flex align-center gap-1">
-                  <va-icon name="description" size="small" /> Detalii Contractuale
+              <div v-if="detailsData.tenant.contract_number" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08);">
+                <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin-bottom: 12px; display: flex; align-items: center; gap: 4px;">
+                  <i class="material-icons" style="font-size: 16px;">description</i> Detalii Contractuale
                 </div>
                 <div class="info-grid">
-                  <div class="info-item">
-                    <span class="label">Nr. Contract:</span>
-                    <span class="value font-bold text-primary">{{ detailsData.tenant.contract_number }}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="label">Stare Contract:</span>
-                    <div><va-badge :color="detailsData.tenant.contract_status === 'ACTIVE' ? 'success' : 'warning'" :text="detailsData.tenant.contract_status === 'ACTIVE' ? 'Activ' : 'Draft'" size="small" /></div>
-                  </div>
-                  <div class="info-item">
-                    <span class="label">Perioadă:</span>
-                    <span class="value text-xs font-medium">{{ formatDate(detailsData.tenant.start_date) }} — {{ formatDate(detailsData.tenant.end_date) }}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="label">Chirie lunară:</span>
-                    <span class="value font-bold text-success text-md">{{ detailsData.tenant.monthly_rent_eur }} €</span>
-                  </div>
-                  <div class="info-item" v-if="detailsData.tenant.deposit_eur">
-                    <span class="label">Garanție reținută:</span>
-                    <span class="value">{{ detailsData.tenant.deposit_eur }} €</span>
-                  </div>
+                  <div class="info-item"><span class="label">Nr. Contract:</span><span class="value font-bold" style="color: #6366f1;">{{ detailsData.tenant.contract_number }}</span></div>
+                  <div class="info-item"><span class="label">Stare Contract:</span><n-tag :type="detailsData.tenant.contract_status === 'ACTIVE' ? 'success' : 'warning'" size="small">{{ detailsData.tenant.contract_status === 'ACTIVE' ? 'Activ' : 'Draft' }}</n-tag></div>
+                  <div class="info-item"><span class="label">Perioadă:</span><span class="value" style="font-size: 0.75rem;">{{ formatDate(detailsData.tenant.start_date) }} — {{ formatDate(detailsData.tenant.end_date) }}</span></div>
+                  <div class="info-item"><span class="label">Chirie lunară:</span><span class="value font-bold" style="color: #10b981;">{{ detailsData.tenant.monthly_rent_eur }} €</span></div>
+                  <div class="info-item" v-if="detailsData.tenant.deposit_eur"><span class="label">Garanție reținută:</span><span class="value">{{ detailsData.tenant.deposit_eur }} €</span></div>
                 </div>
               </div>
             </div>
 
-            <div v-else class="text-center py-5 text--secondary bg-white rounded-lg border p-4 mt-2">
-              <va-icon name="info_outline" size="large" class="mb-2 text-warning" />
-              <p class="m-0 text-sm font-medium">Nu a fost identificat un contract activ sau o ofertă online în sistem.</p>
-              <p class="text-xs mt-1 text--secondary">Este posibil ca închirierea sau rezervarea să fi fost operată manual offline.</p>
+            <div v-else style="text-align: center; padding: 20px; color: #94a3b8;">
+              <n-icon size="32" color="#f59e0b"><i class="material-icons">info_outline</i></n-icon>
+              <p style="margin: 8px 0 0; font-size: 0.85rem;">Nu a fost identificat un contract activ sau o ofertă online în sistem.</p>
+              <p style="font-size: 0.75rem; margin-top: 4px; color: #64748b;">Este posibil ca închirierea sau rezervarea să fi fost operată manual offline.</p>
             </div>
           </div>
         </div>
       </div>
 
       <template #footer>
-        <va-button preset="secondary" @click="showDetailsModal = false">Închide</va-button>
+        <n-button @click="showDetailsModal = false">Închide</n-button>
       </template>
-    </va-modal>
+    </n-modal>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, h } from 'vue';
 import { useStore } from 'vuex';
-import { useToast } from 'vuestic-ui';
+import { useRouter } from 'vue-router';
+import { useMessage, NCard, NDataTable, NButton, NInput, NSelect, NModal, NTag, NSpin, NIcon } from 'naive-ui';
 import api from '../services/api';
 import { SPACE_STATUS } from '../services/labels';
 import PropertyMap from '../components/PropertyMap.vue';
 
 export default {
   name: 'Properties',
-  components: { PropertyMap },
+  components: { NCard, NDataTable, NButton, NInput, NSelect, NModal, NTag, NSpin, NIcon, PropertyMap },
   setup() {
     const store = useStore();
-    const { init } = useToast();
+    const router = useRouter();
+    const message = useMessage();
     const items = ref([]);
     const loading = ref(false);
     const search = ref('');
@@ -238,7 +178,7 @@ export default {
         detailsData.value = res.data;
       } catch (e) {
         console.error(e);
-        init({ message: 'Eroare la încărcarea detaliilor.', color: 'danger' });
+        message.error('Eroare la încărcarea detaliilor.');
       } finally {
         loadingDetails.value = false;
       }
@@ -251,16 +191,32 @@ export default {
     };
 
     const isAdmin = computed(() => store.getters.isAdmin);
-    const cols = [
-      { key: 'image', label: 'Imagine' },
-      { key: 'title', label: 'Denumire' },
-      { key: 'sector', label: 'Sector' },
-      { key: 'area', label: 'Suprafață' },
-      { key: 'price', label: 'Preț' },
-      { key: 'category_name', label: 'Categorie' },
-      { key: 'status', label: 'Stare' },
-      { key: 'actions', label: 'Acțiuni' },
-    ];
+    
+    // Naive UI status mapping
+    const statusTypeMap = { FREE: 'success', OCCUPIED: 'info', RESERVED: 'warning', MAINTENANCE: 'error' };
+    const ST = {};
+    Object.entries(SPACE_STATUS).forEach(([key, val]) => {
+      ST[key] = { ...val, naiveType: statusTypeMap[key] || 'default' };
+    });
+
+    const columns = computed(() => [
+      { title: 'Imagine', key: 'image', width: 80, render(row) { return h('img', { src: getImageUrl(row.image_path), style: 'width: 60px; height: 40px; object-fit: cover; border-radius: 4px; display: block;' }); } },
+      { title: 'Denumire', key: 'title' },
+      { title: 'Sector', key: 'sector' },
+      { title: 'Suprafață', key: 'area', render(row) { return `${row.area} mp`; } },
+      { title: 'Preț', key: 'price', render(row) { return `${row.price} €`; } },
+      { title: 'Categorie', key: 'category_name' },
+      { title: 'Stare', key: 'status', render(row) { const s = ST[row.status]; return h(NTag, { type: s?.naiveType || 'default', size: 'small' }, { default: () => s?.label || row.status }); } },
+      { title: 'Acțiuni', key: 'actions', width: 200, render(row) {
+        return h('div', { style: 'display: flex; gap: 14px; align-items: center;' }, [
+          h(NButton, { text: true, type: 'primary', onClick: () => openDetailsModal(row), title: 'Vezi detalii & chiriaș' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'visibility') }) }),
+          h(NButton, { text: true, type: 'info', onClick: () => openMapModal(row), title: 'Vezi pe hartă' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'map') }) }),
+          h(NButton, { text: true, type: 'primary', onClick: () => router.push(`/app/properties/edit/${row.id}`), title: 'Editează spațiu' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'edit') }) }),
+          ...(isAdmin.value ? [h(NButton, { text: true, type: 'error', onClick: () => remove(row.id), title: 'Șterge spațiu' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'delete') }) })] : []),
+        ]);
+      }},
+    ]);
+
     const statusOptions = Object.entries(SPACE_STATUS)
       .filter(([value]) => value !== 'MAINTENANCE')
       .map(([value, v]) => ({ value, label: v.label }));
@@ -278,10 +234,10 @@ export default {
       if (!confirm('Ștergi spațiul?')) return;
       try {
         await api.delete(`/properties/${id}`);
-        init({ message: 'Spațiu șters cu succes.', color: 'success' });
+        message.success('Spațiu șters cu succes.');
         load();
       } catch (e) {
-        init({ message: 'Eroare la ștergere.', color: 'danger' });
+        message.error('Eroare la ștergere.');
       }
     };
     const getImageUrl = (path) => {
@@ -290,7 +246,7 @@ export default {
     };
     onMounted(load);
     return { 
-      items, loading, search, statusFilter, statusOptions, cols, ST: SPACE_STATUS, isAdmin, 
+      items, loading, search, statusFilter, statusOptions, columns, ST, isAdmin, 
       showMapModal, selectedProperty, openMapModal, 
       showDetailsModal, loadingDetails, detailsData, detailsImgIdx, openDetailsModal, formatDate,
       load, remove, getImageUrl 
@@ -300,113 +256,22 @@ export default {
 </script>
 
 <style scoped>
-.details-split-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 28px;
-  align-items: start;
-  margin-top: 12px;
-}
-.details-split-grid.single-column {
-  grid-template-columns: 1fr;
-}
-@media (max-width: 900px) {
-  .details-split-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-}
-
-.detail-card {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-  transition: box-shadow 0.2s ease;
-}
-.detail-card:hover {
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-}
-.detail-card.tenant-card-occupied {
-  background: #f8fef9;
-  border: 1px solid #10b981;
-}
-.detail-card.tenant-card-reserved {
-  background: #fffefb;
-  border: 1px solid #f59e0b;
-}
-
-.card-title-header {
-  font-size: 1.05rem;
-  font-weight: 700;
-  margin-bottom: 18px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.card-title-header.space-title {
-  color: #1e293b;
-}
-.card-title-header.occupied-title {
-  color: #047857;
-  border-bottom-color: #a7f3d0;
-}
-.card-title-header.reserved-title {
-  color: #b45309;
-  border-bottom-color: #fde68a;
-}
-
-.tenant-header {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px 20px;
-}
-.info-item {
-  display: flex;
-  flex-direction: column;
-  font-size: 0.85rem;
-}
-.info-item.xs12 {
-  grid-column: span 2;
-}
-.info-item .label {
-  color: #64748b;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.info-item .value {
-  color: #1e293b;
-  margin-top: 4px;
-}
-.border-bottom {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-.border-top {
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-}
-.bg-light {
-  background-color: #f8fafc;
-}
-.font-bold {
-  font-weight: 700;
-}
-.font-medium {
-  font-weight: 500;
-}
-.text-md {
-  font-size: 1rem;
-}
+.details-split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; margin-top: 12px; }
+.details-split-grid.single-column { grid-template-columns: 1fr; }
+@media (max-width: 900px) { .details-split-grid { grid-template-columns: 1fr; gap: 20px; } }
+.details-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(255,255,255,0.04); border-radius: 8px; margin-bottom: 16px; }
+.detail-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 24px; }
+.detail-card.tenant-card-occupied { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
+.detail-card.tenant-card-reserved { border-color: #f59e0b; background: rgba(245, 158, 11, 0.05); }
+.card-title-header { font-size: 1.05rem; font-weight: 700; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 8px; }
+.card-title-header.space-title { color: #e2e8f0; }
+.card-title-header.occupied-title { color: #10b981; border-bottom-color: rgba(16, 185, 129, 0.3); }
+.card-title-header.reserved-title { color: #f59e0b; border-bottom-color: rgba(245, 158, 11, 0.3); }
+.tenant-header { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
+.info-item { display: flex; flex-direction: column; font-size: 0.85rem; }
+.info-item.xs12 { grid-column: span 2; }
+.info-item .label { color: #64748b; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.info-item .value { color: #e2e8f0; margin-top: 4px; }
+.font-bold { font-weight: 700; }
 </style>

@@ -2,66 +2,69 @@
   <div>
     <div class="page-title">Facturi</div>
     <div class="toolbar">
-      <va-select v-model="statusFilter" :options="statusOptions" text-by="label" value-by="value" placeholder="Toate stările" clearable @update:modelValue="load" />
+      <n-select v-model:value="statusFilter" :options="statusOptions" placeholder="Toate stările" clearable @update:value="load" style="width: 200px;" />
       <span class="spacer"></span>
-      <va-button icon="bolt" @click="generate" :loading="generating">Generează facturi</va-button>
+      <n-button type="primary" :loading="generating" @click="generate">
+        <template #icon><n-icon><i class="material-icons">bolt</i></n-icon></template>
+        Generează facturi
+      </n-button>
     </div>
 
-    <va-card>
-      <va-card-content>
-        <va-data-table :items="invoices" :columns="cols" :loading="loading">
-          <template #cell(issue_date)="{ value }">{{ fmtDate(value) }}</template>
-          <template #cell(due_date)="{ value }">{{ fmtDate(value) }}</template>
-          <template #cell(total_ron)="{ value }">{{ fmt(value) }} RON</template>
-          <template #cell(status)="{ value }">
-            <va-badge :color="ST[value]?.color" :text="ST[value]?.label || value" />
-          </template>
-          <template #cell(actions)="{ row }">
-            <va-button preset="plain" icon="visibility" title="Vezi" @click="$router.push(`/app/invoices/${row.source.id}`)" />
-            <va-button preset="plain" color="info" icon="picture_as_pdf" title="Descarcă PDF" @click="downloadPdf(row.source.id, row.source.invoice_number)" />
-            <va-button v-if="['ISSUED','OVERDUE'].includes(row.source.status)" preset="plain" color="success" icon="paid" title="Marchează plătită" @click="pay(row.source.id)" />
-            <va-button v-if="row.source.status !== 'CANCELLED'" preset="plain" color="danger" icon="block" title="Anulează" @click="openCancelModal(row.source.id)" />
-          </template>
-        </va-data-table>
-      </va-card-content>
-    </va-card>
+    <n-card>
+      <n-data-table :columns="columns" :data="invoices" :loading="loading" :bordered="false" />
+    </n-card>
 
-    <va-modal v-model="showCancelModal" title="Confirmare Anulare Factură" hide-default-actions>
-      <div class="mb-3" style="font-size: 0.95rem; color: var(--va-text-primary);">
+    <n-modal v-model:show="showCancelModal" title="Confirmare Anulare Factură" preset="card" style="width: 480px;">
+      <div style="font-size: 0.95rem; margin-bottom: 12px;">
         Ești sigur că dorești să anulezi această factură? Această acțiune va schimba starea în <b>Anulată</b> și nu va mai putea fi încasată.
       </div>
       <template #footer>
-        <va-button preset="secondary" @click="showCancelModal = false">Înapoi</va-button>
-        <va-button class="ml-2" color="danger" @click="confirmCancel">Confirmă Anularea</va-button>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <n-button @click="showCancelModal = false">Înapoi</n-button>
+          <n-button type="error" @click="confirmCancel">Confirmă Anularea</n-button>
+        </div>
       </template>
-    </va-modal>
+    </n-modal>
   </div>
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
-import { useToast } from 'vuestic-ui';
+import { ref, onMounted, h } from 'vue';
+import { useRouter } from 'vue-router';
+import { useMessage, NCard, NDataTable, NButton, NSelect, NModal, NTag, NIcon } from 'naive-ui';
 import api from '../services/api';
 import { INVOICE_STATUS } from '../services/labels';
 
 export default {
   name: 'Invoices',
+  components: { NCard, NDataTable, NButton, NSelect, NModal, NTag, NIcon },
   setup() {
-    const { init } = useToast();
+    const router = useRouter();
+    const message = useMessage();
     const invoices = ref([]);
     const loading = ref(false);
     const generating = ref(false);
     const statusFilter = ref(null);
     const showCancelModal = ref(false);
     const invoiceToCancel = ref(null);
-    const cols = [
-      { key: 'invoice_number', label: 'Nr. factură' },
-      { key: 'tenant_name', label: 'Chiriaș' },
-      { key: 'issue_date', label: 'Emisă' },
-      { key: 'due_date', label: 'Scadență' },
-      { key: 'total_ron', label: 'Total' },
-      { key: 'status', label: 'Stare' },
-      { key: 'actions', label: 'Acțiuni' },
+    const statusTypeMap = { ISSUED: 'info', PAID: 'success', OVERDUE: 'error', CANCELLED: 'default' };
+    const ST = INVOICE_STATUS;
+
+    const columns = [
+      { title: 'Nr. factură', key: 'invoice_number' },
+      { title: 'Chiriaș', key: 'tenant_name' },
+      { title: 'Emisă', key: 'issue_date', render(row) { return fmtDate(row.issue_date); } },
+      { title: 'Scadență', key: 'due_date', render(row) { return fmtDate(row.due_date); } },
+      { title: 'Total', key: 'total_ron', render(row) { return `${fmt(row.total_ron)} RON`; } },
+      { title: 'Stare', key: 'status', render(row) { const s = ST[row.status]; return h(NTag, { type: statusTypeMap[row.status] || 'default', size: 'small' }, { default: () => s?.label || row.status }); } },
+      { title: 'Acțiuni', key: 'actions', width: 200, render(row) {
+        return h('div', { style: 'display: flex; gap: 14px; align-items: center;' }, [
+          h(NButton, { text: true, type: 'primary', onClick: () => router.push(`/app/invoices/${row.id}`), title: 'Vezi' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'visibility') }) }),
+          h(NButton, { text: true, type: 'info', onClick: () => downloadPdf(row.id, row.invoice_number), title: 'Descarcă PDF' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'picture_as_pdf') }) }),
+          ...(['ISSUED','OVERDUE'].includes(row.status) ? [h(NButton, { text: true, type: 'success', onClick: () => pay(row.id), title: 'Marchează plătită' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'paid') }) })] : []),
+          ...(row.status !== 'CANCELLED' ? [h(NButton, { text: true, type: 'error', onClick: () => openCancelModal(row.id), title: 'Anulează' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'block') }) })] : []),
+        ]);
+      }},
     ];
     const statusOptions = Object.entries(INVOICE_STATUS).map(([value, v]) => ({ value, label: v.label }));
     const fmt = (n) => Number(n || 0).toLocaleString('ro-RO');
@@ -80,13 +83,13 @@ export default {
     };
     const generate = async () => {
       generating.value = true;
-      try { const r = await api.post('/invoices/generate'); init({ message: r.data.message, color: 'success' }); load(); }
-      catch (e) { init({ message: 'Eroare la generare.', color: 'danger' }); }
+      try { const r = await api.post('/invoices/generate'); message.success(r.data.message); load(); }
+      catch (e) { message.error('Eroare la generare.'); }
       finally { generating.value = false; }
     };
     const pay = async (id) => {
-      try { await api.patch(`/invoices/${id}/pay`); init({ message: 'Factură achitată.', color: 'success' }); load(); }
-      catch (e) { init({ message: 'Eroare.', color: 'danger' }); }
+      try { await api.patch(`/invoices/${id}/pay`); message.success('Factură achitată.'); load(); }
+      catch (e) { message.error('Eroare.'); }
     };
     const openCancelModal = (id) => {
       invoiceToCancel.value = id;
@@ -95,8 +98,8 @@ export default {
     const confirmCancel = async () => {
       if (!invoiceToCancel.value) return;
       showCancelModal.value = false;
-      try { await api.patch(`/invoices/${invoiceToCancel.value}/cancel`); init({ message: 'Factură anulată.', color: 'success' }); load(); }
-      catch (e) { init({ message: 'Eroare la anulare.', color: 'danger' }); }
+      try { await api.patch(`/invoices/${invoiceToCancel.value}/cancel`); message.success('Factură anulată.'); load(); }
+      catch (e) { message.error('Eroare la anulare.'); }
     };
     const downloadPdf = async (id, invNumber) => {
       try {
@@ -111,11 +114,11 @@ export default {
         window.URL.revokeObjectURL(url);
       } catch (err) {
         console.error(err);
-        init({ message: 'Eroare la descărcarea PDF-ului.', color: 'danger' });
+        message.error('Eroare la descărcarea PDF-ului.');
       }
     };
     onMounted(load);
-    return { invoices, loading, generating, statusFilter, statusOptions, cols, ST: INVOICE_STATUS, fmt, fmtDate, load, generate, pay, openCancelModal, confirmCancel, downloadPdf, showCancelModal };
+    return { invoices, loading, generating, statusFilter, statusOptions, columns, fmt, fmtDate, load, generate, pay, openCancelModal, confirmCancel, downloadPdf, showCancelModal };
   }
 };
 </script>

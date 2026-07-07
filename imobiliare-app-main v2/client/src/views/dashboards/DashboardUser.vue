@@ -1,16 +1,18 @@
 <template>
   <div class="text-center mt-5">
-    <va-icon name="search" size="4rem" color="primary" class="mb-3" />
-    <h2 class="display-3 mb-2">Bine ai venit!</h2>
-    <p class="text--secondary mb-4">
+    <n-icon size="64" color="#6366f1" class="mb-3"><i class="material-icons">search</i></n-icon>
+    <h2 style="font-size: 1.6rem; margin-bottom: 8px;">Bine ai venit!</h2>
+    <p style="color: #94a3b8; margin-bottom: 20px;">
       Contul tău a fost creat. Pentru moment, ai acces limitat și poți explora doar catalogul de spații.
     </p>
-    <va-button to="/">Către Catalogul de Spații</va-button>
+    <n-button type="primary" tag="a" @click="$router.push('/')">Către Catalogul de Spații</n-button>
   </div>
 </template>
 
 <script>
+import { NButton, NIcon } from 'naive-ui';
 export default {
   name: 'DashboardUser',
+  components: { NButton, NIcon },
 };
 </script>
