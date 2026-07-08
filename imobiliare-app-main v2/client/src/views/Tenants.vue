@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="page-title">Chiriași</div>
-    <div class="toolbar">
+    <div class="neo-inline-filters mb-3">
       <n-input v-model:value="search" placeholder="Caută după denumire sau CUI..." clearable @clear="load" @keyup.enter="load" style="max-width: 300px;">
         <template #prefix><n-icon><i class="material-icons" style="font-size:16px">search</i></n-icon></template>
       </n-input>
@@ -13,9 +13,44 @@
       </n-button>
     </div>
 
-    <n-card>
-      <n-data-table :columns="columns" :data="tenants" :loading="loading" :bordered="false" />
-    </n-card>
+    <div v-if="loading" class="text-center py-5"><n-spin size="large" /></div>
+    <div v-else class="tenant-cards-grid">
+      <div v-for="t in tenants" :key="t.id" class="tenant-profile-card">
+        <div class="tenant-header">
+          <div class="tenant-avatar">{{ (t.company_name || 'C')[0].toUpperCase() }}</div>
+          <div class="tenant-info">
+            <h3>{{ t.company_name }}</h3>
+            <div class="cui-tag">CUI: {{ t.cui || '-' }}</div>
+          </div>
+          <span class="active-badge" :style="t.status === 'ACTIVE' ? '' : 'background:rgba(239,68,68,0.15);color:#f87171;'">
+            {{ t.status === 'ACTIVE' ? 'Activ' : t.status }}
+          </span>
+        </div>
+
+        <div class="tenant-details">
+          <div class="detail-row">
+            <i class="material-icons">account_circle</i>
+            <span><strong>Reprezentant:</strong> {{ t.legal_rep_name || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <i class="material-icons">email</i>
+            <span>{{ t.email || 'fara.email@client.ro' }}</span>
+          </div>
+          <div class="detail-row">
+            <i class="material-icons">phone</i>
+            <span>{{ t.phone || '-' }}</span>
+          </div>
+        </div>
+
+        <div class="row-actions" style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+          <button class="icon-btn" title="Editează chiriaș" @click="openEdit(t)"><i class="material-icons" style="font-size:18px">edit</i></button>
+          <button v-if="isAdmin" class="icon-btn danger" title="Șterge chiriaș" @click="deleteTenant(t.id)"><i class="material-icons" style="font-size:18px">delete</i></button>
+        </div>
+      </div>
+      <div v-if="!tenants.length" class="text-center py-5" style="grid-column: 1 / -1; color: #64748b;">
+        Nu au fost găsiți chiriași.
+      </div>
+    </div>
 
     <n-modal v-model:show="showModal" :title="editing ? 'Editează chiriaș' : 'Chiriaș nou'" preset="card" style="width: 500px;">
       <n-form-item label="Denumire firmă"><n-input v-model:value="form.company_name" /></n-form-item>

@@ -1,9 +1,45 @@
 <template>
   <div>
     <div class="page-title">Contractele mele</div>
-    <n-card :bordered="true">
-      <n-data-table :data="items" :columns="cols" :loading="loading" :bordered="false" />
-    </n-card>
+    <div class="neo-table-card">
+      <div v-if="loading" class="text-center py-5"><n-spin size="large" /></div>
+      <table v-else class="neo-table">
+        <thead>
+          <tr>
+            <th>Nr. Contract</th>
+            <th>Spațiu Închiriat</th>
+            <th>Perioadă Contractuală</th>
+            <th>Chirie Lunară</th>
+            <th>Stare</th>
+            <th style="text-align: right;">Acțiuni</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in items" :key="item.id">
+            <td><span class="code-pill">{{ item.contract_number || 'DRAFT' }}</span></td>
+            <td><strong style="color: white;">{{ item.property_title }}</strong></td>
+            <td>
+              <div>{{ fmtDate(item.start_date) }} → {{ fmtDate(item.end_date) }}</div>
+            </td>
+            <td><strong style="color: #34d399;">{{ item.monthly_rent_eur }} €</strong></td>
+            <td>
+              <span class="status-chip" :class="item.status === 'ACTIVE' ? 'active' : item.status === 'DRAFT' ? 'pending' : 'danger'">
+                {{ ST[item.status]?.label || item.status }}
+              </span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" title="Vizualizează" @click="openViewModal(item)"><i class="material-icons" style="font-size:18px">visibility</i></button>
+                <button class="icon-btn" title="Descarcă PDF" @click="downloadPdf(item.id, item.contract_number)"><i class="material-icons" style="font-size:18px">picture_as_pdf</i></button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!items.length">
+            <td colspan="6" class="text-center py-4" style="color: #64748b;">Nu ai niciun contract înregistrat.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <n-modal v-model:show="showViewModal" title="Detalii Contract de Închiriere" preset="card" style="width: 650px;">
       <div v-if="selectedContract" class="contract-view-grid">
@@ -110,11 +146,16 @@ export default {
       showViewModal.value = true;
     };
 
+    const fmtDate = (d) => {
+      if (!d) return '';
+      return new Date(d).toLocaleDateString('ro-RO');
+    };
+
     onMounted(async () => {
       try { items.value = (await api.get('/contracts/mine')).data; } catch (e) { console.error(e); }
       finally { loading.value = false; }
     });
-    return { items, loading, cols, ST, showModal, currentReason, showReason, downloadPdf, showViewModal, selectedContract, openViewModal };
+    return { items, loading, cols, ST, fmtDate, showModal, currentReason, showReason, downloadPdf, showViewModal, selectedContract, openViewModal };
   }
 };
 </script>

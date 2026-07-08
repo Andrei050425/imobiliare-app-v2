@@ -1,16 +1,75 @@
 <template>
   <div>
-    <div class="page-title">Acasă — Administrator</div>
+    <div class="page-title d-flex justify-space-between align-center">
+      <span>Acasă — Centru de Comandă Administrator</span>
+      <n-button secondary size="small" @click="showMonthlyModal = true">
+        <template #icon><i class="material-icons">analytics</i></template>
+        Istoric Încasări Lunare
+      </n-button>
+    </div>
     <div v-if="loading" class="text-center" style="padding: 40px; display: flex; justify-content: center;"><n-spin size="large" /></div>
     <div v-else>
-      <div class="row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
-        <div><kpi label="Grad de ocupare" :value="data.occupancyRate + '%'" :sub="data.occupied + ' din ' + data.totalSpaces + ' spații'" icon="pie_chart" /></div>
-        <div><kpi label="Facturat luna curentă" :value="fmt(data.invoicedThisMonth) + ' RON'" icon="request_quote" icon-button icon-title="Vezi istoricul pe luni" @icon-click="showMonthlyModal = true" /></div>
-        <div><kpi label="Încasat luna curentă" :value="fmt(data.collectedThisMonth) + ' RON'" icon="payments" icon-button icon-title="Vezi istoricul pe luni" @icon-click="showMonthlyModal = true" /></div>
-        <div><kpi label="Restanțe active" :value="fmt(data.overdueAmount) + ' RON'" :sub="data.overdueTenants + ' chiriași'" icon="warning" color="danger" /></div>
+      <div class="kpi-grid-4 mb-4">
+        <div class="kpi-box glow-emerald">
+          <div class="kpi-head">
+            <span>Grad de ocupare</span>
+            <div class="icon-sq emerald"><i class="material-icons">pie_chart</i></div>
+          </div>
+          <div class="kpi-num">{{ data.occupancyRate }}%</div>
+          <div class="kpi-sub">
+            <span class="pill-up"><i class="material-icons">apartment</i></span>
+            <span>{{ data.occupied }} din {{ data.totalSpaces }} spații ocupate</span>
+          </div>
+        </div>
+
+        <div class="kpi-box glow-indigo" style="cursor: pointer;" @click="showMonthlyModal = true">
+          <div class="kpi-head">
+            <span>Facturat luna curentă</span>
+            <div class="icon-sq indigo"><i class="material-icons">request_quote</i></div>
+          </div>
+          <div class="kpi-num">{{ fmt(data.invoicedThisMonth) }} RON</div>
+          <div class="kpi-sub">
+            <span class="pill-up">Vezi luni →</span>
+            <span>click pentru istoric detaliat</span>
+          </div>
+        </div>
+
+        <div class="kpi-box glow-indigo" style="cursor: pointer;" @click="showMonthlyModal = true">
+          <div class="kpi-head">
+            <span>Încasat luna curentă</span>
+            <div class="icon-sq indigo"><i class="material-icons">payments</i></div>
+          </div>
+          <div class="kpi-num">{{ fmt(data.collectedThisMonth) }} RON</div>
+          <div class="kpi-sub">
+            <span class="pill-up">Încasări →</span>
+            <span>raport lunar complet</span>
+          </div>
+        </div>
+
+        <div class="kpi-box glow-rose">
+          <div class="kpi-head">
+            <span>Restanțe active</span>
+            <div class="icon-sq rose"><i class="material-icons">warning</i></div>
+          </div>
+          <div class="kpi-num text-rose">{{ fmt(data.overdueAmount) }} RON</div>
+          <div class="kpi-sub">
+            <span class="pill-warn">{{ data.overdueTenants }} chiriași</span>
+            <span>necesită atenție</span>
+          </div>
+        </div>
       </div>
-      <div class="row mt-2" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 16px;">
-        <div><kpi label="Contracte active" :value="data.activeContracts" icon="description" /></div>
+
+      <div class="kpi-grid-4 mb-4" style="grid-template-columns: repeat(2, 1fr);">
+        <div class="kpi-box glow-amber">
+          <div class="kpi-head">
+            <span>Contracte active</span>
+            <div class="icon-sq amber"><i class="material-icons">description</i></div>
+          </div>
+          <div class="kpi-num">{{ data.activeContracts }}</div>
+          <div class="kpi-sub">
+            <span>Toate contractele în derulare</span>
+          </div>
+        </div>
       </div>
 
       <n-card class="mt-4" style="margin-top: 24px;" title="Contracte care expiră în 30 de zile" :bordered="true">
@@ -205,3 +264,62 @@ export default {
   }
 };
 </script>
+
+<style scoped>
+.kpi-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+.kpi-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #94a3b8;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.icon-sq {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.icon-sq.indigo { background: rgba(99, 102, 241, 0.2); color: #818cf8; }
+.icon-sq.emerald { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.icon-sq.amber { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.icon-sq.rose { background: rgba(244, 63, 94, 0.2); color: #fb7185; }
+.kpi-num {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: white;
+  margin: 10px 0 6px;
+}
+.text-rose { color: #f87171 !important; }
+.kpi-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+.pill-up {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.pill-warn {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-weight: 700;
+}
+</style>

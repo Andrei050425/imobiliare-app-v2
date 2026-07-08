@@ -9,12 +9,44 @@
       <n-tab-pane name="rejected" tab="Oferte respinse"></n-tab-pane>
     </n-tabs>
 
-    <n-card>
-      <div v-if="loading" style="display: flex; justify-content: center; padding: 40px;">
-        <n-spin size="medium" />
+    <div v-if="loading" class="text-center py-5"><n-spin size="large" /></div>
+    <div v-else class="offers-cards-list">
+      <div v-for="item in filteredOffers" :key="item.id" class="offer-row-card">
+        <div class="offer-left">
+          <span class="status-chip" :class="item.status === 'ACCEPTED' ? 'active' : item.status === 'PENDING' ? 'pending' : item.status === 'SENT' ? 'info' : 'danger'">
+            {{ item.status === 'PENDING' ? 'În așteptare' : item.status === 'ACCEPTED' ? 'Acceptată' : item.status === 'SENT' ? 'Trimisă' : 'Refuzată' }}
+          </span>
+          <div>
+            <h3>{{ item.property_title }}</h3>
+            <div class="sub-text">Client: <strong>{{ item.user_name }}</strong> · Tel: {{ item.user_phone || '-' }}</div>
+          </div>
+        </div>
+
+        <div class="offer-middle">
+          <div class="financial-pill">
+            <span class="label">Preț Ofertat</span>
+            <span class="val text-green">{{ item.offer_price ? item.offer_price + ' EUR' : '-' }}</span>
+          </div>
+          <div class="financial-pill">
+            <span class="label">Data ofertei</span>
+            <span class="val">{{ item.created_at || '-' }}</span>
+          </div>
+        </div>
+
+        <div class="offer-right">
+          <button class="icon-btn" title="Vizualizare ofertă" @click="openDetailsModal(item)"><i class="material-icons" style="font-size:18px">visibility</i></button>
+          <button v-if="item.status === 'PENDING'" class="btn-accept" title="Trimite răspuns" @click="openModal(item)">
+            <i class="material-icons" style="font-size:16px">send</i> Răspunde
+          </button>
+          <button v-if="item.status === 'PENDING'" class="btn-reject" title="Anulează oferta" @click="cancelOffer(item.id)">
+            <i class="material-icons" style="font-size:16px">cancel</i> Anulează
+          </button>
+        </div>
       </div>
-      <n-data-table v-else :columns="columns" :data="filteredOffers" :bordered="false" />
-    </n-card>
+      <div v-if="!filteredOffers.length" class="text-center py-5" style="color: #64748b;">
+        Nu există oferte în această categorie.
+      </div>
+    </div>
 
     <n-modal v-model:show="showModal" title="Trimite Ofertă" preset="card" style="width: 600px;">
       <div v-if="selectedOffer" class="modal-form">

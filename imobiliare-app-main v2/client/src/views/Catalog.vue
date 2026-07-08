@@ -6,8 +6,8 @@
     </div>
 
     <!-- Bara de filtre sus (fixă pe un singur rând orizontal) -->
-    <n-card class="filter-bar mb-3" :bordered="true" content-style="padding: 12px 16px;">
-      <div class="catalog-filters-row">
+    <div class="neo-inline-filters mb-3">
+      <div class="catalog-filters-row" style="display: flex; flex-wrap: nowrap; align-items: center; gap: 12px; width: 100%;">
         <n-input v-model:value="filters.q" placeholder="Caută după denumire, stradă, zonă..." clearable @clear="fetchProperties" @update:value="val => { if (!val) fetchProperties(); }" @keyup.enter="fetchProperties" class="filter-search-input">
           <template #prefix><n-icon><i class="material-icons" style="font-size:16px">search</i></n-icon></template>
         </n-input>
@@ -18,7 +18,7 @@
           Caută
         </n-button>
       </div>
-    </n-card>
+    </div>
 
     <div v-if="loading" class="text-center my-5 py-5">
       <n-spin size="large" />
@@ -307,7 +307,9 @@ export default {
 .result-count { font-size: 0.95rem; color: #94a3b8; }
 
 .property-card {
-  border-radius: 14px;
+  background: #141b2d !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px;
   overflow: hidden;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   cursor: pointer;
@@ -317,7 +319,7 @@ export default {
 .property-card:hover,
 .property-card.hovered-card {
   transform: translateY(-3px) scale(1.008);
-  box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.25);
+  box-shadow: 0 14px 28px -6px rgba(99, 102, 241, 0.35);
   border-color: #6366f1 !important;
 }
 

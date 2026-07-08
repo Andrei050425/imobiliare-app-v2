@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="page-title">Facturi</div>
-    <div class="toolbar">
+    <div class="neo-inline-filters mb-3">
       <n-select v-model:value="statusFilter" :options="statusOptions" placeholder="Toate stările" clearable @update:value="load" style="width: 200px;" />
       <span class="spacer"></span>
       <n-button type="primary" :loading="generating" @click="generate">
@@ -10,9 +10,47 @@
       </n-button>
     </div>
 
-    <n-card>
-      <n-data-table :columns="columns" :data="invoices" :loading="loading" :bordered="false" />
-    </n-card>
+    <div class="neo-table-card">
+      <div v-if="loading" class="text-center py-5"><n-spin size="large" /></div>
+      <table v-else class="neo-table">
+        <thead>
+          <tr>
+            <th>Nr. Factură</th>
+            <th>Chiriaș</th>
+            <th>Data Emiterii</th>
+            <th>Scadență</th>
+            <th>Total RON</th>
+            <th>Stare</th>
+            <th style="text-align: right;">Acțiuni</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in invoices" :key="item.id">
+            <td><span class="code-pill">{{ item.invoice_number }}</span></td>
+            <td><strong style="color: white;">{{ item.tenant_name }}</strong></td>
+            <td>{{ fmtDate(item.issue_date) }}</td>
+            <td>{{ fmtDate(item.due_date) }}</td>
+            <td><strong style="color: #34d399;">{{ fmt(item.total_ron) }} RON</strong></td>
+            <td>
+              <span class="status-chip" :class="item.status === 'PAID' ? 'active' : item.status === 'OVERDUE' ? 'danger' : item.status === 'ISSUED' ? 'info' : ''">
+                {{ ST[item.status]?.label || item.status }}
+              </span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" title="Vezi factură" @click="$router.push(`/app/invoices/${item.id}`)"><i class="material-icons" style="font-size:18px">visibility</i></button>
+                <button class="icon-btn" title="Descarcă PDF" @click="downloadPdf(item.id, item.invoice_number)"><i class="material-icons" style="font-size:18px">picture_as_pdf</i></button>
+                <button v-if="['ISSUED','OVERDUE'].includes(item.status)" class="icon-btn success" title="Marchează plătită" @click="pay(item.id)"><i class="material-icons" style="font-size:18px">paid</i></button>
+                <button v-if="item.status !== 'CANCELLED'" class="icon-btn danger" title="Anulează factură" @click="openCancelModal(item.id)"><i class="material-icons" style="font-size:18px">block</i></button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!invoices.length">
+            <td colspan="7" class="text-center py-4" style="color: #64748b;">Nu există facturi generate.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <n-modal v-model:show="showCancelModal" title="Confirmare Anulare Factură" preset="card" style="width: 480px;">
       <div style="font-size: 0.95rem; margin-bottom: 12px;">
@@ -118,7 +156,7 @@ export default {
       }
     };
     onMounted(load);
-    return { invoices, loading, generating, statusFilter, statusOptions, columns, fmt, fmtDate, load, generate, pay, openCancelModal, confirmCancel, downloadPdf, showCancelModal };
+    return { invoices, loading, generating, statusFilter, statusOptions, columns, fmt, fmtDate, load, generate, pay, openCancelModal, confirmCancel, downloadPdf, showCancelModal, ST };
   }
 };
 </script>

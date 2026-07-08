@@ -1,5 +1,5 @@
 <template>
-  <div style="display: flex; justify-content: center; padding-bottom: 24px;">
+  <div class="add-property-page" style="display: flex; justify-content: center; padding-bottom: 24px;">
     <div style="width: 100%; max-width: 900px;">
       <n-card>
         <template #header>
@@ -79,6 +79,7 @@ import { useMessage, NCard, NInput, NInputNumber, NSelect, NButton, NFormItem, N
 import api from "../services/api";
 
 export default {
+  name: 'AddProperty',
   components: { NCard, NInput, NInputNumber, NSelect, NButton, NFormItem, NDivider, NIcon },
   setup() {
     const router = useRouter();

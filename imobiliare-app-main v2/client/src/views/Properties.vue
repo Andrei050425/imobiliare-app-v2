@@ -1,21 +1,63 @@
 <template>
   <div>
     <div class="page-title">Spații comerciale</div>
-    <div class="toolbar">
+    <div class="neo-inline-filters mb-3">
       <n-input v-model:value="search" placeholder="Caută spațiu..." clearable @clear="load" @keyup.enter="load" style="max-width: 300px;">
         <template #prefix><n-icon><i class="material-icons" style="font-size:16px">search</i></n-icon></template>
       </n-input>
       <n-select v-model:value="statusFilter" :options="statusOptions" placeholder="Toate stările" clearable @update:value="load" style="width: 180px;" />
       <span class="spacer"></span>
-      <n-button v-if="isAdmin" type="primary" @click="$router.push('/app/properties/add')">
+      <n-button v-if="isAdmin" type="primary" @click="openCreateModal">
         <template #icon><n-icon><i class="material-icons">add</i></n-icon></template>
         Spațiu nou
       </n-button>
     </div>
 
-    <n-card>
-      <n-data-table :columns="columns" :data="items" :loading="loading" :bordered="false" />
-    </n-card>
+    <div class="neo-table-card">
+      <div v-if="loading" class="text-center py-5"><n-spin size="large" /></div>
+      <table v-else class="neo-table">
+        <thead>
+          <tr>
+            <th>Imagine</th>
+            <th>Denumire Spațiu</th>
+            <th>Categorie</th>
+            <th>Sector</th>
+            <th>Suprafață</th>
+            <th>Preț</th>
+            <th>Status</th>
+            <th style="text-align: right;">Acțiuni</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in items" :key="item.id">
+            <td>
+              <img :src="getImageUrl(item.image_path)" style="width: 56px; height: 38px; object-fit: cover; border-radius: 6px; display: block;" />
+            </td>
+            <td><strong style="color: white;">{{ item.title }}</strong></td>
+            <td><span class="cat-pill">{{ item.category_name || 'Comercial' }}</span></td>
+            <td>{{ item.sector || '-' }}</td>
+            <td>{{ item.area }} m²</td>
+            <td><strong style="color: #34d399;">{{ item.price }} €</strong></td>
+            <td>
+              <span class="status-chip" :class="item.status === 'FREE' ? 'active' : item.status === 'OCCUPIED' ? 'info' : item.status === 'RESERVED' ? 'pending' : 'danger'">
+                {{ ST[item.status]?.label || item.status }}
+              </span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" title="Detalii & chiriaș" @click="openDetailsModal(item)"><i class="material-icons" style="font-size:18px">visibility</i></button>
+                <button class="icon-btn" title="Vezi pe hartă" @click="openMapModal(item)"><i class="material-icons" style="font-size:18px">map</i></button>
+                <button class="icon-btn" title="Editează" @click="openEditModal(item)"><i class="material-icons" style="font-size:18px">edit</i></button>
+                <button v-if="isAdmin" class="icon-btn danger" title="Șterge" @click="remove(item.id)"><i class="material-icons" style="font-size:18px">delete</i></button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!items.length">
+            <td colspan="8" class="text-center py-4" style="color: #64748b;">Nu există spații adăugate.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <!-- Modal Localizare Hartă -->
     <n-modal v-model:show="showMapModal" :title="`Localizare pe hartă: ${selectedProperty?.title || ''}`" preset="card" style="width: 800px;">
@@ -128,24 +170,138 @@
       </div>
 
       <template #footer>
-        <n-button @click="showDetailsModal = false">Închide</n-button>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <n-button v-if="isAdmin && detailsData" type="primary" @click="showDetailsModal = false; openEditModal(detailsData)">
+            <template #icon><n-icon><i class="material-icons">edit</i></n-icon></template>
+            Editează Spațiul
+          </n-button>
+          <n-button @click="showDetailsModal = false" style="margin-left: auto;">Închide</n-button>
+        </div>
+      </template>
+    </n-modal>
+
+    <!-- Modal Adăugare Spațiu Comercial Nou -->
+    <n-modal v-model:show="showCreateModal" title="Spațiu comercial nou" preset="card" :mask-closable="true" transform-origin="center" style="width: 650px;">
+      <n-form-item label="Titlu Anunț">
+        <n-input v-model:value="createForm.title" placeholder="Ex: Birou Clasa A - Floreasca" />
+      </n-form-item>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <n-form-item label="Categorie">
+          <n-select v-model:value="createForm.category_id" :options="categories" placeholder="Selectează categorie" />
+        </n-form-item>
+        <n-form-item label="Sector">
+          <n-select v-model:value="createForm.sector" :options="sectorOpts" placeholder="Alege sector" clearable />
+        </n-form-item>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <n-form-item label="Preț lunar">
+          <n-input-number v-model:value="createForm.price" :min="0" placeholder="0" style="width: 100%;">
+            <template #suffix>EUR</template>
+          </n-input-number>
+        </n-form-item>
+        <n-form-item label="Suprafață">
+          <n-input-number v-model:value="createForm.area" :min="0" placeholder="0" style="width: 100%;">
+            <template #suffix>m²</template>
+          </n-input-number>
+        </n-form-item>
+      </div>
+
+      <n-form-item label="Adresă exactă">
+        <n-input v-model:value="createForm.address" placeholder="Strada, Numărul..." />
+      </n-form-item>
+
+      <n-form-item label="Imagine principală">
+        <div style="width: 100%; border: 1px dashed rgba(255,255,255,0.2); border-radius: 8px; padding: 14px; text-align: center;">
+          <input id="create-modal-file" type="file" @change="handleCreateFileChange" accept="image/*" style="display: none" />
+          <n-button @click="triggerCreateFileClick">
+            <template #icon><n-icon><i class="material-icons">cloud_upload</i></n-icon></template>
+            Alege Imagine
+          </n-button>
+          <div style="margin-top: 8px; font-size: 0.8rem;">
+            <span v-if="createDisplayFileName" style="color: #10b981; font-weight: 600;">
+              ✓ {{ createDisplayFileName }}
+            </span>
+            <span v-else style="color: #64748b;">Nicio imagine selectată</span>
+          </div>
+        </div>
+      </n-form-item>
+
+      <n-form-item label="Descriere detaliată">
+        <n-input v-model:value="createForm.description" type="textarea" :rows="3" placeholder="Informații suplimentare despre spațiu..." />
+      </n-form-item>
+
+      <template #footer>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <n-button @click="showCreateModal = false">Anulează</n-button>
+          <n-button type="primary" :loading="savingCreate" @click="saveCreateProperty">Salvează</n-button>
+        </div>
+      </template>
+    </n-modal>
+
+    <!-- Modal Editare Spațiu Comercial -->
+    <n-modal v-model:show="showEditModal" title="Editează spațiul comercial" preset="card" :mask-closable="true" transform-origin="center" style="width: 650px;">
+      <n-form-item label="Titlu Anunț">
+        <n-input v-model:value="editForm.title" placeholder="Titlu spațiu" />
+      </n-form-item>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <n-form-item label="Categorie">
+          <n-select v-model:value="editForm.category_id" :options="categories" />
+        </n-form-item>
+        <n-form-item label="Sector">
+          <n-select v-model:value="editForm.sector" :options="sectorOpts" clearable />
+        </n-form-item>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <n-form-item label="Preț lunar">
+          <n-input-number v-model:value="editForm.price" :min="0" style="width: 100%;">
+            <template #suffix>EUR</template>
+          </n-input-number>
+        </n-form-item>
+        <n-form-item label="Suprafață">
+          <n-input-number v-model:value="editForm.area" :min="0" style="width: 100%;">
+            <template #suffix>m²</template>
+          </n-input-number>
+        </n-form-item>
+      </div>
+
+      <n-form-item label="Adresă exactă">
+        <n-input v-model:value="editForm.address" />
+      </n-form-item>
+
+      <n-form-item label="Stare Curentă">
+        <n-select v-model:value="editForm.status" :options="statusOptions" />
+      </n-form-item>
+
+      <n-form-item label="Descriere detaliată">
+        <n-input v-model:value="editForm.description" type="textarea" :rows="3" />
+      </n-form-item>
+
+      <template #footer>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <n-button @click="showEditModal = false">Anulează</n-button>
+          <n-button type="primary" :loading="savingEdit" @click="saveEditProperty">Salvează Modificările</n-button>
+        </div>
       </template>
     </n-modal>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, h } from 'vue';
+import { ref, reactive, computed, onMounted, h } from 'vue';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
-import { useMessage, NCard, NDataTable, NButton, NInput, NSelect, NModal, NTag, NSpin, NIcon } from 'naive-ui';
+import { useMessage, NCard, NDataTable, NButton, NInput, NInputNumber, NSelect, NModal, NTag, NSpin, NIcon, NFormItem, NDivider } from 'naive-ui';
 import api from '../services/api';
 import { SPACE_STATUS } from '../services/labels';
 import PropertyMap from '../components/PropertyMap.vue';
 
 export default {
   name: 'Properties',
-  components: { NCard, NDataTable, NButton, NInput, NSelect, NModal, NTag, NSpin, NIcon, PropertyMap },
+  components: { NCard, NDataTable, NButton, NInput, NInputNumber, NSelect, NModal, NTag, NSpin, NIcon, NFormItem, NDivider, PropertyMap },
   setup() {
     const store = useStore();
     const router = useRouter();
@@ -162,6 +318,134 @@ export default {
     const loadingDetails = ref(false);
     const detailsData = ref(null);
     const detailsImgIdx = ref(0);
+
+    // Date categorii și sectoare
+    const categories = [
+      { id: 1, value: 1, label: "Birouri", name: "Birouri" },
+      { id: 2, value: 2, label: "Comercial / Retail", name: "Comercial / Retail" },
+      { id: 3, value: 3, label: "Industrial / Hale", name: "Industrial / Hale" },
+      { id: 4, value: 4, label: "Terenuri", name: "Terenuri" },
+    ];
+    const sectorOpts = [
+      { value: "Sector 1", label: "Sector 1" }, { value: "Sector 2", label: "Sector 2" },
+      { value: "Sector 3", label: "Sector 3" }, { value: "Sector 4", label: "Sector 4" },
+      { value: "Sector 5", label: "Sector 5" }, { value: "Sector 6", label: "Sector 6" },
+    ];
+
+    // Stări Modal Spațiu Nou
+    const showCreateModal = ref(false);
+    const savingCreate = ref(false);
+    const createFile = ref(null);
+    const createDisplayFileName = ref("");
+    const createForm = reactive({
+      title: "", category_id: null, price: null, area: null,
+      address: "", sector: null, description: ""
+    });
+
+    // Stări Modal Editare Spațiu
+    const showEditModal = ref(false);
+    const savingEdit = ref(false);
+    const editForm = reactive({
+      id: null, title: "", category_id: null, price: null, area: null,
+      address: "", sector: null, description: "", status: "FREE"
+    });
+
+    const triggerCreateFileClick = () => {
+      document.getElementById("create-modal-file")?.click();
+    };
+
+    const handleCreateFileChange = (event) => {
+      if (event.target.files && event.target.files[0]) {
+        createFile.value = event.target.files[0];
+        createDisplayFileName.value = event.target.files[0].name;
+      }
+    };
+
+    const openCreateModal = () => {
+      createForm.title = "";
+      createForm.category_id = null;
+      createForm.price = null;
+      createForm.area = null;
+      createForm.address = "";
+      createForm.sector = null;
+      createForm.description = "";
+      createFile.value = null;
+      createDisplayFileName.value = "";
+      showCreateModal.value = true;
+    };
+
+    const saveCreateProperty = async () => {
+      if (!createForm.title || !createForm.category_id || !createForm.price || !createForm.area || !createForm.address) {
+        message.warning("Verifică formularul! Toate câmpurile obligatorii trebuie completate.");
+        return;
+      }
+      if (!createFile.value) {
+        message.warning("Selectează o imagine pentru spațiu!");
+        return;
+      }
+      savingCreate.value = true;
+      try {
+        const formData = new FormData();
+        formData.append("title", createForm.title);
+        formData.append("description", createForm.description || "");
+        formData.append("price", createForm.price);
+        formData.append("area", createForm.area);
+        formData.append("address", createForm.address);
+        formData.append("sector", createForm.sector || "");
+        formData.append("category_id", createForm.category_id);
+        formData.append("image", createFile.value);
+        await api.post("/properties", formData, { headers: { "Content-Type": undefined } });
+        message.success("Spațiu comercial adăugat cu succes!");
+        showCreateModal.value = false;
+        await load();
+      } catch (err) {
+        console.error(err);
+        message.error(err.response?.data?.message || "Eroare la adăugarea spațiului.");
+      } finally {
+        savingCreate.value = false;
+      }
+    };
+
+    const openEditModal = (prop) => {
+      editForm.id = prop.id;
+      editForm.title = prop.title || "";
+      editForm.category_id = prop.category_id || null;
+      editForm.price = prop.price !== null && prop.price !== undefined ? Number(prop.price) : null;
+      editForm.area = prop.area !== null && prop.area !== undefined ? Number(prop.area) : null;
+      editForm.address = prop.address || "";
+      editForm.sector = prop.sector || null;
+      editForm.description = prop.description || "";
+      editForm.status = prop.status || "FREE";
+      showEditModal.value = true;
+    };
+
+    const saveEditProperty = async () => {
+      if (!editForm.title || !editForm.category_id || !editForm.price || !editForm.area || !editForm.address) {
+        message.warning("Verifică formularul! Toate câmpurile obligatorii trebuie completate.");
+        return;
+      }
+      savingEdit.value = true;
+      try {
+        await api.put(`/properties/${editForm.id}`, {
+          title: editForm.title,
+          description: editForm.description || "",
+          price: editForm.price,
+          area: editForm.area,
+          address: editForm.address,
+          sector: editForm.sector || "",
+          category_id: editForm.category_id,
+          status: editForm.status
+        });
+        message.success("Spațiu comercial actualizat cu succes!");
+        showEditModal.value = false;
+        await load();
+      } catch (err) {
+        console.error(err);
+        message.error("Eroare la actualizarea spațiului.");
+      } finally {
+        savingEdit.value = false;
+      }
+    };
 
     const openMapModal = (prop) => {
       selectedProperty.value = prop;
@@ -196,7 +480,7 @@ export default {
     const statusTypeMap = { FREE: 'success', OCCUPIED: 'info', RESERVED: 'warning', MAINTENANCE: 'error' };
     const ST = {};
     Object.entries(SPACE_STATUS).forEach(([key, val]) => {
-      ST[key] = { ...val, naiveType: statusTypeMap[key] || 'default' };
+      ST[key] = { label: val.label, naiveType: statusTypeMap[key] || 'default' };
     });
 
     const columns = computed(() => [
@@ -211,7 +495,7 @@ export default {
         return h('div', { style: 'display: flex; gap: 14px; align-items: center;' }, [
           h(NButton, { text: true, type: 'primary', onClick: () => openDetailsModal(row), title: 'Vezi detalii & chiriaș' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'visibility') }) }),
           h(NButton, { text: true, type: 'info', onClick: () => openMapModal(row), title: 'Vezi pe hartă' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'map') }) }),
-          h(NButton, { text: true, type: 'primary', onClick: () => router.push(`/app/properties/edit/${row.id}`), title: 'Editează spațiu' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'edit') }) }),
+          h(NButton, { text: true, type: 'primary', onClick: () => openEditModal(row), title: 'Editează spațiu' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'edit') }) }),
           ...(isAdmin.value ? [h(NButton, { text: true, type: 'error', onClick: () => remove(row.id), title: 'Șterge spațiu' }, { icon: () => h(NIcon, null, { default: () => h('i', { class: 'material-icons' }, 'delete') }) })] : []),
         ]);
       }},
@@ -242,14 +526,27 @@ export default {
     };
     const getImageUrl = (path) => {
       if (!path) return 'https://placehold.co/400x300?text=Spatiu';
-      return `http://localhost:3000/${path.replace(/\\/g, '/')}`;
+      const strPath = typeof path === 'string' ? path : (path.path || String(path));
+      if (!strPath) return 'https://placehold.co/400x300?text=Spatiu';
+      return `http://localhost:3000/${strPath.replace(/\\/g, '/')}`;
+    };
+    const goToAddProperty = () => {
+      openCreateModal();
+    };
+    const goToEditProperty = (id) => {
+      const prop = items.value.find(x => x.id === id);
+      if (prop) openEditModal(prop);
     };
     onMounted(load);
     return { 
       items, loading, search, statusFilter, statusOptions, columns, ST, isAdmin, 
       showMapModal, selectedProperty, openMapModal, 
       showDetailsModal, loadingDetails, detailsData, detailsImgIdx, openDetailsModal, formatDate,
-      load, remove, getImageUrl 
+      load, remove, getImageUrl, goToAddProperty, goToEditProperty,
+      categories, sectorOpts,
+      showCreateModal, savingCreate, createForm, createFile, createDisplayFileName,
+      triggerCreateFileClick, handleCreateFileChange, openCreateModal, saveCreateProperty,
+      showEditModal, savingEdit, editForm, openEditModal, saveEditProperty
     };
   }
 };

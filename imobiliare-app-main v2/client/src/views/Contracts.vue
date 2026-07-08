@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="page-title">Contracte</div>
-    <div class="toolbar">
+    <div class="neo-inline-filters mb-3">
       <n-select v-model:value="statusFilter" :options="statusOptions" placeholder="Toate stările" clearable @update:value="load" style="width: 200px;" />
       <span class="spacer"></span>
       <n-button v-if="isAdmin" type="primary" @click="openCreate">
@@ -10,9 +10,50 @@
       </n-button>
     </div>
 
-    <n-card>
-      <n-data-table :columns="columns" :data="contracts" :loading="loading" :bordered="false" />
-    </n-card>
+    <div class="neo-table-card">
+      <div v-if="loading" class="text-center py-5"><n-spin size="large" /></div>
+      <table v-else class="neo-table">
+        <thead>
+          <tr>
+            <th>Nr. Contract</th>
+            <th>Chiriaș</th>
+            <th>Spațiu Închiriat</th>
+            <th>Perioadă Contractuală</th>
+            <th>Chirie Lunară</th>
+            <th>Stare</th>
+            <th style="text-align: right;">Acțiuni</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in contracts" :key="item.id">
+            <td><span class="code-pill">{{ item.contract_number || 'DRAFT' }}</span></td>
+            <td><strong style="color: white;">{{ item.tenant_name }}</strong></td>
+            <td>{{ item.property_title }}</td>
+            <td>
+              <div>{{ fmtDate(item.start_date) }} → {{ fmtDate(item.end_date) }}</div>
+              <div class="progress-mini"><div class="fill" style="width: 60%;"></div></div>
+            </td>
+            <td><strong style="color: #34d399;">{{ item.monthly_rent_eur }} €</strong></td>
+            <td>
+              <span class="status-chip" :class="item.status === 'ACTIVE' ? 'active' : item.status === 'DRAFT' ? 'pending' : 'danger'">
+                {{ ST[item.status]?.label || item.status }}
+              </span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" title="Vizualizare contract" @click="openViewModal(item)"><i class="material-icons" style="font-size:18px">visibility</i></button>
+                <button class="icon-btn" title="Descarcă PDF" @click="downloadPdf(item.id, item.contract_number)"><i class="material-icons" style="font-size:18px">picture_as_pdf</i></button>
+                <button v-if="isAdmin && item.status === 'DRAFT'" class="icon-btn success" title="Activează contract" @click="activate(item.id)"><i class="material-icons" style="font-size:18px">check_circle</i></button>
+                <button v-if="isAdmin && item.status === 'ACTIVE'" class="icon-btn danger" title="Reziliază contract" @click="openTerminate(item.id)"><i class="material-icons" style="font-size:18px">cancel</i></button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!contracts.length">
+            <td colspan="7" class="text-center py-4" style="color: #64748b;">Nu există contracte înregistrate.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <n-modal v-model:show="showViewModal" title="Detalii Contract de Închiriere" preset="card" style="width: 700px;">
       <div v-if="selectedContract">

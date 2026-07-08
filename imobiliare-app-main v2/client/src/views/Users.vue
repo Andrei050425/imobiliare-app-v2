@@ -1,9 +1,42 @@
 <template>
   <div>
     <div class="page-title">Utilizatori</div>
-    <n-card>
-      <n-data-table :columns="columns" :data="users" :loading="loading" :bordered="false" />
-    </n-card>
+    <div class="neo-table-card">
+      <div v-if="loading" class="text-center py-5"><n-spin size="large" /></div>
+      <table v-else class="neo-table">
+        <thead>
+          <tr>
+            <th>Utilizator</th>
+            <th>Email</th>
+            <th>Rol</th>
+            <th style="text-align: right;">Acțiuni</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in users" :key="item.id">
+            <td>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(99,102,241,0.2); color: #818cf8; display: flex; align-items: center; justify-content: center; font-weight: 700;">
+                  {{ (item.full_name || 'U')[0].toUpperCase() }}
+                </div>
+                <strong style="color: white;">{{ item.full_name }}</strong>
+              </div>
+            </td>
+            <td>{{ item.email }}</td>
+            <td>
+              <span class="role-badge" :class="item.role === 'admin' ? 'role-admin' : item.role === 'client' ? 'role-client' : 'role-user'">
+                {{ item.role === 'admin' ? 'Administrator' : item.role === 'client' ? 'Chiriaș / Client' : 'Utilizator' }}
+              </span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button v-if="item.role !== 'admin'" class="icon-btn danger" title="Șterge utilizator" @click="remove(item.id)"><i class="material-icons" style="font-size:18px">delete</i></button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 

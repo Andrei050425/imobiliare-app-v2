@@ -2,11 +2,37 @@
   <div>
     <div class="page-title">Ofertele mele</div>
 
-    <n-card :bordered="true">
-      <div v-if="loading" class="text-center" style="padding: 40px; display: flex; justify-content: center;"><n-spin size="large" /></div>
-      
-      <n-data-table v-else :data="offers" :columns="cols" :bordered="false" />
-    </n-card>
+    <div v-if="loading" class="text-center py-5"><n-spin size="large" /></div>
+    <div v-else class="offers-cards-list">
+      <div v-for="item in offers" :key="item.id" class="offer-row-card">
+        <div class="offer-left">
+          <span class="status-chip" :class="item.status === 'ACCEPTED' ? 'active' : item.status === 'PENDING' ? 'pending' : item.status === 'SENT' ? 'info' : 'danger'">
+            {{ item.status === 'PENDING' ? 'În așteptare' : item.status === 'ACCEPTED' ? 'Ofertă acceptată' : item.status === 'SENT' ? 'Ofertă primită' : 'Ofertă refuzată' }}
+          </span>
+          <div>
+            <h3>{{ item.property_title }}</h3>
+            <div class="sub-text">Trimisă la data: {{ item.created_at || '-' }}</div>
+          </div>
+        </div>
+
+        <div class="offer-middle">
+          <div class="financial-pill">
+            <span class="label">Preț Ofertat</span>
+            <span class="val text-green">{{ item.offer_price ? item.offer_price + ' EUR' : '-' }}</span>
+          </div>
+        </div>
+
+        <div class="offer-right">
+          <button class="icon-btn" title="Vezi ofertă" @click="viewDetails(item)"><i class="material-icons" style="font-size:18px">visibility</i></button>
+          <button v-if="item.status === 'PENDING'" class="btn-reject" title="Anulează oferta" @click="openCancelModal(item.id)">
+            <i class="material-icons" style="font-size:16px">cancel</i> Anulează
+          </button>
+        </div>
+      </div>
+      <div v-if="!offers.length" class="text-center py-5" style="color: #64748b;">
+        Nu ai trimis / primit nicio ofertă încă.
+      </div>
+    </div>
 
     <n-modal v-model:show="showModal" title="Detalii Ofertă" preset="card" style="width: 550px;">
       <div v-if="selectedOffer">

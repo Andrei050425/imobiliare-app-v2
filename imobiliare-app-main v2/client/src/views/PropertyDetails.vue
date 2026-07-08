@@ -1,7 +1,8 @@
 <template>
-  <div v-if="loading" class="text-center mt-5" style="padding: 40px; display: flex; justify-content: center;">
-    <n-spin size="large" />
-  </div>
+  <div class="property-details-container">
+    <div v-if="loading" class="text-center mt-5" style="padding: 40px; display: flex; justify-content: center;">
+      <n-spin size="large" />
+    </div>
 
   <div v-else-if="!property" class="text-center mt-5" style="padding: 40px; text-align: center;">
     <h3>Anunțul nu a fost găsit.</h3>
@@ -99,7 +100,7 @@
                 </div>
 
                 <div style="margin-top: 24px;" v-if="isAdmin">
-                  <n-button block type="primary" @click="$router.push(`/app/properties/edit/${property.id}`)">
+                  <n-button block type="primary" @click="openEditModal">
                     <template #icon><n-icon><i class="material-icons">edit</i></n-icon></template>
                     Editează Spațiul
                   </n-button>
@@ -209,20 +210,70 @@
         Vezi în „Ofertele mele”
       </n-button>
     </n-modal>
+
+    <!-- Modal Editare Spațiu Comercial -->
+    <n-modal v-model:show="showEditModal" title="Editează spațiul comercial" preset="card" :mask-closable="true" transform-origin="center" style="width: 650px;">
+      <n-form-item label="Titlu Anunț">
+        <n-input v-model:value="editForm.title" placeholder="Titlu spațiu" />
+      </n-form-item>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <n-form-item label="Categorie">
+          <n-select v-model:value="editForm.category_id" :options="categories" />
+        </n-form-item>
+        <n-form-item label="Sector">
+          <n-select v-model:value="editForm.sector" :options="sectorOpts" clearable />
+        </n-form-item>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <n-form-item label="Preț lunar">
+          <n-input-number v-model:value="editForm.price" :min="0" style="width: 100%;">
+            <template #suffix>EUR</template>
+          </n-input-number>
+        </n-form-item>
+        <n-form-item label="Suprafață">
+          <n-input-number v-model:value="editForm.area" :min="0" style="width: 100%;">
+            <template #suffix>m²</template>
+          </n-input-number>
+        </n-form-item>
+      </div>
+
+      <n-form-item label="Adresă exactă">
+        <n-input v-model:value="editForm.address" />
+      </n-form-item>
+
+      <n-form-item label="Stare Curentă">
+        <n-select v-model:value="editForm.status" :options="statusOptions" />
+      </n-form-item>
+
+      <n-form-item label="Descriere detaliată">
+        <n-input v-model:value="editForm.description" type="textarea" :rows="3" />
+      </n-form-item>
+
+      <template #footer>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <n-button @click="showEditModal = false">Anulează</n-button>
+          <n-button type="primary" :loading="savingEdit" @click="saveEditProperty">Salvează Modificările</n-button>
+        </div>
+      </template>
+    </n-modal>
+    </div>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
-import { useMessage, NCard, NButton, NIcon, NSpin, NTag, NDivider, NAlert, NModal, NInput, NInputNumber } from 'naive-ui';
+import { useMessage, NCard, NButton, NIcon, NSpin, NTag, NDivider, NAlert, NModal, NInput, NInputNumber, NSelect, NFormItem } from 'naive-ui';
 import api from '../services/api';
+import { SPACE_STATUS } from '../services/labels';
 import PropertyMap from '../components/PropertyMap.vue';
 
 export default {
   name: 'PropertyDetails',
-  components: { NCard, NButton, NIcon, NSpin, NTag, NDivider, NAlert, NModal, NInput, NInputNumber, PropertyMap },
+  components: { NCard, NButton, NIcon, NSpin, NTag, NDivider, NAlert, NModal, NInput, NInputNumber, NSelect, NFormItem, PropertyMap },
   setup() {
     const route = useRoute();
     const router = useRouter();
@@ -396,11 +447,66 @@ export default {
       return false;
     });
 
+    // State și opțiuni pentru editare spațiu
+    const showEditModal = ref(false);
+    const savingEdit = ref(false);
+    const editForm = reactive({
+      title: "", category_id: null, price: null, area: null,
+      address: "", sector: null, description: "", status: "FREE"
+    });
+
+    const categories = [
+      { id: 1, value: 1, label: "Birouri", name: "Birouri" },
+      { id: 2, value: 2, label: "Comercial / Retail", name: "Comercial / Retail" },
+      { id: 3, value: 3, label: "Industrial / Hale", name: "Industrial / Hale" },
+      { id: 4, value: 4, label: "Terenuri", name: "Terenuri" },
+    ];
+
+    const sectorOpts = [
+      { value: "Sector 1", label: "Sector 1" }, { value: "Sector 2", label: "Sector 2" },
+      { value: "Sector 3", label: "Sector 3" }, { value: "Sector 4", label: "Sector 4" },
+      { value: "Sector 5", label: "Sector 5" }, { value: "Sector 6", label: "Sector 6" },
+    ];
+
+    const statusOptions = Object.entries(SPACE_STATUS).map(([value, v]) => ({ value, label: v.label }));
+
+    const openEditModal = () => {
+      if (!property.value) return;
+      editForm.title = property.value.title || "";
+      editForm.category_id = property.value.category_id || null;
+      editForm.price = property.value.price || 0;
+      editForm.area = property.value.area || 0;
+      editForm.address = property.value.address || "";
+      editForm.sector = property.value.sector || null;
+      editForm.description = property.value.description || "";
+      editForm.status = property.value.status || "FREE";
+      showEditModal.value = true;
+    };
+
+    const saveEditProperty = async () => {
+      if (!editForm.title || !editForm.category_id || !editForm.price || !editForm.area || !editForm.address) {
+        message.warning("Verifică formularul! Toate câmpurile obligatorii trebuie completate.");
+        return;
+      }
+      savingEdit.value = true;
+      try {
+        await api.put(`/properties/${property.value.id}`, editForm);
+        message.success("Spațiu comercial actualizat cu succes!");
+        showEditModal.value = false;
+        await fetchProperty();
+      } catch (e) {
+        message.error(e.response?.data?.error || "Eroare la actualizarea spațiului.");
+      } finally {
+        savingEdit.value = false;
+      }
+    };
+
     onMounted(fetchProperty);
 
     return { 
       property, loading, getImageUrl, isAdmin, currentImgIdx, nextImg, prevImg, isMyRentedSpace,
-      showOfferModal, showDuplicateOfferModal, sendingOffer, offerForm, openOfferModal, submitOffer, myActiveOffer
+      showOfferModal, showDuplicateOfferModal, sendingOffer, offerForm, openOfferModal, submitOffer, myActiveOffer,
+      showEditModal, savingEdit, editForm, categories, sectorOpts, statusOptions, openEditModal, saveEditProperty
     };
   }
 };

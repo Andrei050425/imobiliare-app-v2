@@ -1,9 +1,42 @@
 <template>
   <div>
     <div class="page-title">Facturile mele</div>
-    <n-card :bordered="true">
-      <n-data-table :data="items" :columns="cols" :loading="loading" :bordered="false" />
-    </n-card>
+    <div class="neo-table-card">
+      <div v-if="loading" class="text-center py-5"><n-spin size="large" /></div>
+      <table v-else class="neo-table">
+        <thead>
+          <tr>
+            <th>Nr. Factură</th>
+            <th>Data Emiterii</th>
+            <th>Scadență</th>
+            <th>Total RON</th>
+            <th>Stare</th>
+            <th style="text-align: right;">Acțiuni</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in items" :key="item.id">
+            <td><span class="code-pill">{{ item.invoice_number }}</span></td>
+            <td>{{ fmtDate(item.issue_date) }}</td>
+            <td>{{ fmtDate(item.due_date) }}</td>
+            <td><strong style="color: #34d399;">{{ fmt(item.total_ron) }} RON</strong></td>
+            <td>
+              <span class="status-chip" :class="item.status === 'PAID' ? 'active' : item.status === 'OVERDUE' ? 'danger' : item.status === 'ISSUED' ? 'info' : ''">
+                {{ ST[item.status]?.label || item.status }}
+              </span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" title="Descarcă PDF" @click="downloadPdf(item.id, item.invoice_number)"><i class="material-icons" style="font-size:18px">picture_as_pdf</i></button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!items.length">
+            <td colspan="6" class="text-center py-4" style="color: #64748b;">Nu ai nicio factură emisă.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 
@@ -61,7 +94,12 @@ export default {
       }
     };
 
-    return { items, loading, cols, fmt, ST, downloadPdf };
+    const fmtDate = (d) => {
+      if (!d) return '';
+      return new Date(d).toLocaleDateString('ro-RO');
+    };
+
+    return { items, loading, cols, fmt, fmtDate, ST, downloadPdf };
   }
 };
 </script>
