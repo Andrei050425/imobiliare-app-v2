@@ -52,7 +52,7 @@
             <n-icon size="18"><i class="material-icons">{{ item.icon }}</i></n-icon>
             <span class="link-title-wrap" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
               <span>{{ item.title }}</span>
-              <n-badge v-if="item.badge && (item.badgeCount > 0 || item.badge)" :value="item.badgeCount || 1" :max="99" :type="item.badgeType" style="margin-left: auto;" />
+              <n-badge v-if="item.badgeCount > 0" :value="item.badgeCount" :max="99" :type="item.badgeType" style="margin-left: auto;" />
             </span>
           </router-link>
         </div>

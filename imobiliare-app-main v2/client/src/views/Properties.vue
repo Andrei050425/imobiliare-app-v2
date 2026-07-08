@@ -272,6 +272,47 @@
         <n-input v-model:value="editForm.address" />
       </n-form-item>
 
+      <n-form-item label="Imagini atașate spațiului (Galerie)">
+        <div style="width: 100%;">
+          <!-- Galerie poze existente -->
+          <div v-if="editForm.images && editForm.images.length > 0" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 12px; margin-bottom: 14px;">
+            <div 
+              v-for="img in editForm.images" 
+              :key="img.id"
+              style="position: relative; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); aspect-ratio: 4/3; background: #111;"
+            >
+              <img 
+                :src="getImageUrl(img.path || img.image_path)" 
+                style="width: 100%; height: 100%; object-fit: cover;" 
+              />
+              <button 
+                type="button"
+                @click.prevent="deleteEditImage(img.id)"
+                title="Șterge imaginea"
+                style="position: absolute; top: 4px; right: 4px; background: rgba(239, 68, 68, 0.9); color: white; border: none; border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2;"
+              >
+                <i class="material-icons" style="font-size: 16px;">delete</i>
+              </button>
+            </div>
+          </div>
+          <div v-else style="color: #64748b; font-size: 0.85rem; margin-bottom: 12px;">
+            Nu există imagini salvate momentan pentru acest spațiu.
+          </div>
+
+          <!-- Buton încărcare poză nouă -->
+          <div style="border: 1px dashed rgba(255,255,255,0.2); border-radius: 8px; padding: 14px; text-align: center; background: rgba(255,255,255,0.02);">
+            <input id="edit-modal-file-list" type="file" @change="handleEditFileChange" accept="image/*" style="display: none" />
+            <n-button type="primary" secondary @click="triggerEditFileClick" :loading="uploadingEditImage">
+              <template #icon><n-icon><i class="material-icons">add_photo_alternate</i></n-icon></template>
+              Încarcă Poză Nouă
+            </n-button>
+            <div style="margin-top: 8px; font-size: 0.8rem; color: #64748b;">
+              Imaginea selectată va fi încărcată și adăugată instant în galeria spațiului
+            </div>
+          </div>
+        </div>
+      </n-form-item>
+
       <n-form-item label="Stare Curentă">
         <n-select v-model:value="editForm.status" :options="statusOptions" />
       </n-form-item>
@@ -294,7 +335,7 @@
 import { ref, reactive, computed, onMounted, h } from 'vue';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
-import { useMessage, NCard, NDataTable, NButton, NInput, NInputNumber, NSelect, NModal, NTag, NSpin, NIcon, NFormItem, NDivider } from 'naive-ui';
+import { useMessage, useDialog, NCard, NDataTable, NButton, NInput, NInputNumber, NSelect, NModal, NTag, NSpin, NIcon, NFormItem, NDivider } from 'naive-ui';
 import api from '../services/api';
 import { SPACE_STATUS } from '../services/labels';
 import PropertyMap from '../components/PropertyMap.vue';
@@ -306,6 +347,7 @@ export default {
     const store = useStore();
     const router = useRouter();
     const message = useMessage();
+    const dialog = useDialog();
     const items = ref([]);
     const loading = ref(false);
     const search = ref('');
@@ -345,10 +387,56 @@ export default {
     // Stări Modal Editare Spațiu
     const showEditModal = ref(false);
     const savingEdit = ref(false);
+    const uploadingEditImage = ref(false);
+    const editFile = ref(null);
+    const editDisplayFileName = ref("");
     const editForm = reactive({
       id: null, title: "", category_id: null, price: null, area: null,
-      address: "", sector: null, description: "", status: "FREE"
+      address: "", sector: null, description: "", status: "FREE", images: []
     });
+
+    const triggerEditFileClick = () => {
+      document.getElementById("edit-modal-file-list")?.click();
+    };
+
+    const handleEditFileChange = async (event) => {
+      const file = event.target.files?.[0];
+      if (!file || !editForm.id) return;
+      uploadingEditImage.value = true;
+      try {
+        const formData = new FormData();
+        formData.append("image", file);
+        const res = await api.post(`/properties/${editForm.id}/images`, formData, { headers: { "Content-Type": undefined } });
+        if (!editForm.images) editForm.images = [];
+        editForm.images.push(res.data);
+        message.success("Imagine încărcată și adăugată în galerie!");
+        await load();
+      } catch (err) {
+        message.error("Eroare la încărcarea imaginii.");
+      } finally {
+        uploadingEditImage.value = false;
+        event.target.value = '';
+      }
+    };
+
+    const deleteEditImage = (imageId) => {
+      dialog.warning({
+        title: 'Ștergere Imagine',
+        content: 'Sigur dorești să ștergi această imagine din galeria spațiului?',
+        positiveText: 'Da, șterge',
+        negativeText: 'Anulează',
+        onPositiveClick: async () => {
+          try {
+            await api.delete(`/properties/${editForm.id}/images/${imageId}`);
+            editForm.images = editForm.images.filter(img => img.id !== imageId);
+            message.success("Imagine ștearsă din galerie!");
+            await load();
+          } catch (err) {
+            message.error("Eroare la ștergerea imaginii.");
+          }
+        }
+      });
+    };
 
     const triggerCreateFileClick = () => {
       document.getElementById("create-modal-file")?.click();
@@ -406,7 +494,7 @@ export default {
       }
     };
 
-    const openEditModal = (prop) => {
+    const openEditModal = async (prop) => {
       editForm.id = prop.id;
       editForm.title = prop.title || "";
       editForm.category_id = prop.category_id || null;
@@ -416,6 +504,14 @@ export default {
       editForm.sector = prop.sector || null;
       editForm.description = prop.description || "";
       editForm.status = prop.status || "FREE";
+      editFile.value = null;
+      editDisplayFileName.value = "";
+      try {
+        const res = await api.get(`/properties/${prop.id}`);
+        editForm.images = res.data?.images || [];
+      } catch (e) {
+        editForm.images = prop.image_path ? [{ id: 'main', path: prop.image_path }] : [];
+      }
       showEditModal.value = true;
     };
 
@@ -436,6 +532,11 @@ export default {
           category_id: editForm.category_id,
           status: editForm.status
         });
+        if (editFile.value) {
+          const formData = new FormData();
+          formData.append("image", editFile.value);
+          await api.post(`/properties/${editForm.id}/images`, formData, { headers: { "Content-Type": undefined } });
+        }
         message.success("Spațiu comercial actualizat cu succes!");
         showEditModal.value = false;
         await load();
@@ -514,15 +615,22 @@ export default {
       } catch (e) { console.error(e); }
       finally { loading.value = false; }
     };
-    const remove = async (id) => {
-      if (!confirm('Ștergi spațiul?')) return;
-      try {
-        await api.delete(`/properties/${id}`);
-        message.success('Spațiu șters cu succes.');
-        load();
-      } catch (e) {
-        message.error('Eroare la ștergere.');
-      }
+    const remove = (id) => {
+      dialog.warning({
+        title: 'Confirmare Ștergere Spațiu',
+        content: 'Ești sigur că dorești să ștergi definitiv acest spațiu comercial? Această acțiune nu poate fi anulată.',
+        positiveText: 'Da, șterge definitiv',
+        negativeText: 'Anulează',
+        onPositiveClick: async () => {
+          try {
+            await api.delete(`/properties/${id}`);
+            message.success('Spațiu șters cu succes.');
+            load();
+          } catch (e) {
+            message.error('Eroare la ștergere.');
+          }
+        }
+      });
     };
     const getImageUrl = (path) => {
       if (!path) return 'https://placehold.co/400x300?text=Spatiu';
@@ -546,7 +654,9 @@ export default {
       categories, sectorOpts,
       showCreateModal, savingCreate, createForm, createFile, createDisplayFileName,
       triggerCreateFileClick, handleCreateFileChange, openCreateModal, saveCreateProperty,
-      showEditModal, savingEdit, editForm, openEditModal, saveEditProperty
+      showEditModal, savingEdit, editForm, openEditModal, saveEditProperty,
+      editFile, editDisplayFileName, triggerEditFileClick, handleEditFileChange,
+      uploadingEditImage, deleteEditImage
     };
   }
 };

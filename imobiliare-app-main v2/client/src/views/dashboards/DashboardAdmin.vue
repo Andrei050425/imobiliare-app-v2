@@ -9,8 +9,9 @@
     </div>
     <div v-if="loading" class="text-center" style="padding: 40px; display: flex; justify-content: center;"><n-spin size="large" /></div>
     <div v-else>
-      <div class="kpi-grid-4 mb-4">
-        <div class="kpi-box glow-emerald">
+      <!-- RANDUL 1: 3 Indicatori Cheie Opraționali -->
+      <div class="kpi-row-top">
+        <div class="kpi-box glow-emerald kpi-card-spacious">
           <div class="kpi-head">
             <span>Grad de ocupare</span>
             <div class="icon-sq emerald"><i class="material-icons">pie_chart</i></div>
@@ -22,7 +23,34 @@
           </div>
         </div>
 
-        <div class="kpi-box glow-indigo" style="cursor: pointer;" @click="showMonthlyModal = true">
+        <div class="kpi-box glow-amber kpi-card-spacious">
+          <div class="kpi-head">
+            <span>Contracte active</span>
+            <div class="icon-sq amber"><i class="material-icons">description</i></div>
+          </div>
+          <div class="kpi-num">{{ data.activeContracts }}</div>
+          <div class="kpi-sub">
+            <span class="pill-up" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;"><i class="material-icons">verified</i></span>
+            <span>Toate contractele în derulare</span>
+          </div>
+        </div>
+
+        <div class="kpi-box glow-rose kpi-card-spacious">
+          <div class="kpi-head">
+            <span>Restanțe active</span>
+            <div class="icon-sq rose"><i class="material-icons">warning</i></div>
+          </div>
+          <div class="kpi-num text-rose">{{ fmt(data.overdueAmount) }} RON</div>
+          <div class="kpi-sub">
+            <span class="pill-warn">{{ data.overdueTenants }} chiriași</span>
+            <span>necesită atenție urgentă</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANDUL 2: 2 Indicatori Financiari Detaliați -->
+      <div class="kpi-row-bottom">
+        <div class="kpi-box glow-indigo kpi-card-spacious" style="cursor: pointer;" @click="showMonthlyModal = true">
           <div class="kpi-head">
             <span>Facturat luna curentă</span>
             <div class="icon-sq indigo"><i class="material-icons">request_quote</i></div>
@@ -30,11 +58,11 @@
           <div class="kpi-num">{{ fmt(data.invoicedThisMonth) }} RON</div>
           <div class="kpi-sub">
             <span class="pill-up">Vezi luni →</span>
-            <span>click pentru istoric detaliat</span>
+            <span>click pentru istoric detaliat lunar</span>
           </div>
         </div>
 
-        <div class="kpi-box glow-indigo" style="cursor: pointer;" @click="showMonthlyModal = true">
+        <div class="kpi-box glow-indigo kpi-card-spacious" style="cursor: pointer;" @click="showMonthlyModal = true">
           <div class="kpi-head">
             <span>Încasat luna curentă</span>
             <div class="icon-sq indigo"><i class="material-icons">payments</i></div>
@@ -45,38 +73,22 @@
             <span>raport lunar complet</span>
           </div>
         </div>
-
-        <div class="kpi-box glow-rose">
-          <div class="kpi-head">
-            <span>Restanțe active</span>
-            <div class="icon-sq rose"><i class="material-icons">warning</i></div>
-          </div>
-          <div class="kpi-num text-rose">{{ fmt(data.overdueAmount) }} RON</div>
-          <div class="kpi-sub">
-            <span class="pill-warn">{{ data.overdueTenants }} chiriași</span>
-            <span>necesită atenție</span>
-          </div>
-        </div>
       </div>
 
-      <div class="kpi-grid-4 mb-4" style="grid-template-columns: repeat(2, 1fr);">
-        <div class="kpi-box glow-amber">
-          <div class="kpi-head">
-            <span>Contracte active</span>
-            <div class="icon-sq amber"><i class="material-icons">description</i></div>
+      <n-card class="mt-4" style="margin-top: 24px; border-radius: 16px;" title="Contracte care expiră în 30 de zile" :bordered="true">
+        <n-data-table v-if="data.expiringContracts && data.expiringContracts.length > 0" :data="data.expiringContracts" :columns="cols" :bordered="false" />
+        <div v-else class="compact-empty-state">
+          <div class="empty-icon-wrap emerald">
+            <i class="material-icons">check_circle</i>
           </div>
-          <div class="kpi-num">{{ data.activeContracts }}</div>
-          <div class="kpi-sub">
-            <span>Toate contractele în derulare</span>
+          <div>
+            <div class="empty-title">Toate contractele sunt în grafic</div>
+            <div class="empty-sub">Niciun contract nu expiră în următoarele 30 de zile.</div>
           </div>
         </div>
-      </div>
-
-      <n-card class="mt-4" style="margin-top: 24px;" title="Contracte care expiră în 30 de zile" :bordered="true">
-        <n-data-table :data="data.expiringContracts || []" :columns="cols" :bordered="false" />
       </n-card>
 
-      <n-card class="mt-4" style="margin-top: 24px;" :bordered="true">
+      <n-card class="mt-4" style="margin-top: 24px; border-radius: 16px;" :bordered="true">
         <template #header>
           <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
             <span>Facturi restante</span>
@@ -86,7 +98,16 @@
             </n-button>
           </div>
         </template>
-        <n-data-table :data="data.overdueInvoices || []" :columns="invoiceCols" :bordered="false" />
+        <n-data-table v-if="data.overdueInvoices && data.overdueInvoices.length > 0" :data="data.overdueInvoices" :columns="invoiceCols" :bordered="false" />
+        <div v-else class="compact-empty-state">
+          <div class="empty-icon-wrap emerald">
+            <i class="material-icons">verified</i>
+          </div>
+          <div>
+            <div class="empty-title">Nicio factură restantă</div>
+            <div class="empty-sub">Toate facturile emise sunt la zi cu plățile.</div>
+          </div>
+        </div>
       </n-card>
 
       <!-- Modal: Istoric încasări pe luni -->
@@ -266,23 +287,49 @@ export default {
 </script>
 
 <style scoped>
-.kpi-grid-4 {
+.kpi-row-top {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.kpi-row-bottom {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 32px;
+}
+@media (max-width: 1100px) {
+  .kpi-row-top, .kpi-row-bottom {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 768px) {
+  .kpi-row-top, .kpi-row-bottom {
+    grid-template-columns: 1fr;
+  }
+}
+.kpi-card-spacious {
+  padding: 26px 28px !important;
+  min-height: 160px;
+  border-radius: 20px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 .kpi-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   color: #94a3b8;
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   font-weight: 600;
+  letter-spacing: 0.3px;
 }
 .icon-sq {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -292,34 +339,68 @@ export default {
 .icon-sq.amber { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
 .icon-sq.rose { background: rgba(244, 63, 94, 0.2); color: #fb7185; }
 .kpi-num {
-  font-size: 1.7rem;
+  font-size: 2.15rem;
   font-weight: 800;
   color: white;
-  margin: 10px 0 6px;
+  margin: 16px 0 10px;
+  line-height: 1.1;
 }
 .text-rose { color: #f87171 !important; }
 .kpi-sub {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   color: #64748b;
+  margin-top: 4px;
 }
 .pill-up {
   background: rgba(16, 185, 129, 0.15);
   color: #34d399;
-  padding: 2px 8px;
+  padding: 4px 10px;
   border-radius: 99px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 .pill-warn {
-  background: rgba(244, 63, 94, 0.15);
+  background: rgba(244, 63, 94, 0.18);
   color: #fb7185;
-  padding: 2px 8px;
+  padding: 4px 10px;
   border-radius: 99px;
   font-weight: 700;
+}
+.compact-empty-state {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 6px;
+}
+.empty-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.empty-icon-wrap.emerald {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+.empty-icon-wrap i {
+  font-size: 24px;
+}
+.empty-title {
+  font-weight: 700;
+  color: #f1f5f9;
+  font-size: 0.98rem;
+}
+.empty-sub {
+  color: #64748b;
+  font-size: 0.84rem;
+  margin-top: 2px;
 }
 </style>
