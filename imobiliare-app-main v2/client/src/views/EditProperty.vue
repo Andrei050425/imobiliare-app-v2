@@ -124,8 +124,18 @@ export default {
       try {
         const id = route.params.id;
         const res = await api.get(`/properties/${id}`);
-        Object.assign(form, res.data);
-        hasLinkedContract.value = !!res.data.hasLinkedContract;
+        const data = res.data;
+        form.id = data.id;
+        form.title = data.title || "";
+        form.description = data.description || "";
+        form.price = data.price !== null && data.price !== undefined ? Number(data.price) : null;
+        form.area = data.area !== null && data.area !== undefined ? Number(data.area) : null;
+        form.address = data.address || "";
+        form.sector = data.sector || null;
+        form.category_id = data.category_id ? Number(data.category_id) : null;
+        form.status = data.status || "FREE";
+        form.images = Array.isArray(data.images) ? data.images : [];
+        hasLinkedContract.value = !!data.hasLinkedContract;
       } catch (err) {
         console.error(err);
         message.error('Eroare la preluarea datelor');
@@ -148,6 +158,7 @@ export default {
           category_id: form.category_id, status: form.status
         });
         message.success("Spațiu actualizat cu succes!");
+        router.push('/app/properties');
       } catch (err) { message.error("Eroare la actualizare."); }
       finally { loading.value = false; }
     };

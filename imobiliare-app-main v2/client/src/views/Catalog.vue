@@ -5,15 +5,15 @@
       <p class="page-subtitle">Găsește spațiul ideal pentru afacerea ta pe harta interactivă SANTA</p>
     </div>
 
-    <!-- Bara de filtre sus (fixă) -->
+    <!-- Bara de filtre sus (fixă pe un singur rând orizontal) -->
     <n-card class="filter-bar mb-3" :bordered="true" content-style="padding: 12px 16px;">
-      <div class="toolbar d-flex flex-wrap gap-3 align-center">
-        <n-input v-model:value="filters.q" placeholder="Caută după denumire, stradă, zonă..." clearable @clear="fetchProperties" @update:value="val => { if (!val) fetchProperties(); }" @keyup.enter="fetchProperties" class="grow">
+      <div class="catalog-filters-row">
+        <n-input v-model:value="filters.q" placeholder="Caută după denumire, stradă, zonă..." clearable @clear="fetchProperties" @update:value="val => { if (!val) fetchProperties(); }" @keyup.enter="fetchProperties" class="filter-search-input">
           <template #prefix><n-icon><i class="material-icons" style="font-size:16px">search</i></n-icon></template>
         </n-input>
-        <n-select v-model:value="filters.sector" :options="sectorOptions" placeholder="Toate sectoarele" clearable style="min-width: 150px;" />
-        <n-select v-model:value="filters.category_id" :options="categoryOptions" placeholder="Toate tipurile" clearable style="min-width: 170px;" />
-        <n-button type="primary" @click="fetchProperties">
+        <n-select v-model:value="filters.sector" :options="sectorOptions" placeholder="Toate sectoarele" clearable class="filter-select-sector" />
+        <n-select v-model:value="filters.category_id" :options="categoryOptions" placeholder="Toate tipurile" clearable class="filter-select-type" />
+        <n-button type="primary" @click="fetchProperties" class="filter-btn-search">
           <template #icon><n-icon><i class="material-icons">filter_list</i></n-icon></template>
           Caută
         </n-button>
@@ -234,9 +234,28 @@ export default {
   border-radius: 12px;
   flex-shrink: 0;
 }
-.grow {
+.catalog-filters-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.catalog-filters-row .filter-search-input {
   flex: 1;
-  min-width: 200px;
+  min-width: 240px;
+}
+.catalog-filters-row .filter-select-sector {
+  width: 200px;
+  flex-shrink: 0;
+}
+.catalog-filters-row .filter-select-type {
+  width: 200px;
+  flex-shrink: 0;
+}
+.catalog-filters-row .filter-btn-search {
+  flex-shrink: 0;
 }
 
 .split-layout {
